@@ -6,11 +6,12 @@ import { PlansModule } from '../plans/plans.module.js';
 import { AdminOrdersController } from './admin-orders.controller.js';
 import { AdminOrdersService } from './admin-orders.service.js';
 import { AdminGuard } from './admin.guard.js';
+import { AuditController } from './audit.controller.js';
 import { AuditService } from './audit.service.js';
 
 @Module({
   imports: [PlansModule],
-  controllers: [AdminAuthController, AdminOrdersController],
+  controllers: [AdminAuthController, AdminOrdersController, AuditController],
   providers: [AdminAuthService, AdminOrdersService, AdminGuard, AuditService, CryptoService],
   exports: [AdminGuard, AuditService, CryptoService],
 })
