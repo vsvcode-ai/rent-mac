@@ -12,3 +12,6 @@ next-env.d.ts
 .pgdata/
 uploads/
 .claude
+e2e/.results/
+e2e/screenshots/
+playwright-report/

@@ -53,7 +53,8 @@ export default function AdminLogin() {
     try {
       await fn();
     } catch (e) {
-      setErr(errText(e));
+      // 登录流程里的 401 是「密码 / 动态码不正确」，要显示后端给的真实原因，不是「登录已过期」
+      setErr(e instanceof Error ? e.message : errText(e));
     } finally {
       setBusy(false);
     }
