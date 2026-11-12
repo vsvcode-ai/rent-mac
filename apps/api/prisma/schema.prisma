@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 金额一律为整数「分」。状态枚举与合法流转见 packages/shared/src/status.ts
+
+enum Term {
+  m1
+  m3
+  m6
+  m12
+}
+
+enum OrderKind {
+  new
+  renew
+}
+
+enum OrderStatus {
+  pending
+  verifying
+  failed
+  queued
+  active
+  done
+  cancelled
+  refunding
+  refunded
+  renewed
+}
+
+enum DeviceStatus {
+  idle
+  assigned
+  in_use
+  expiring
+  grace
+  recycling
+  maintenance
+  fault
+  retired
+}
+
+enum LeaseStatus {
+  active
+  expiring
+  grace
+  ended
+}
+
+enum AdminRole {
+  support // 客服：核对收款、工单
+  ops // 运维：开通、回收、机器
+  admin // 管理员
+}
+
+enum RefundStatus {
+  refunding
+  refunded
+}
+
+enum TicketStatus {
+  open
+  processing
+  resolved
+  closed
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  emailVerified Boolean        @default(false)
+  wechat        String?
+  telegram      String?
+  status        String         @default("active") // active | disabled
+  createdAt     DateTime       @default(now())
+  orders        Order[]
+  leases        Lease[]
+  tickets       Ticket[]
+  notifications Notification[]
+}
+
+model Plan {
+  term             Term     @id
+  months           Int
+  monthlyCents     Int
+  xianyuUrl        String?
+  xianyuQrImage    String?
+  dedicatedSupport Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  no                String      @unique
+  userId            String
+  user              User        @relation(fields: [userId], references: [id])
+  kind              OrderKind   @default(new)
+  renewLeaseId      String?
+  term              Term
+  months            Int
+  quantity          Int
+  unitCents         Int
+  totalCents        Int
+  priceSnapshot     Json
+  contactWechat     String?
+  contactTelegram   String?
+  xianyuOrderNo     String?
+  xianyuBuyerNick   String?
+  xianyuSubmittedAt DateTime?
+  paidCents         Int?
+  verifiedById      String?
+  verifiedAt        DateTime?
+  /// 客服确认收款时间；7 天开通时限从此刻起算
+  paidAt            DateTime?
+  status            OrderStatus @default(pending)
+  /// 待付款订单过期时间（创建 + 48h）
+  expiresAt         DateTime?
+  /// 开通截止（paidAt + 7 天）
+  deadlineAt        DateTime?
+  cancelledReason   String?
+  failedReason      String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  leases            Lease[]
+  refunds           Refund[]
+
+  @@index([userId, createdAt])
+  @@index([status, deadlineAt])
+  @@index([xianyuOrderNo])
+}
+
+model Device {
+  id              String       @id @default(cuid())
+  code            String       @unique // NYD-MY-0001
+  serial          String       @unique
+  rackLocation    String
+  publicIp        String       @unique
+  chip            String       @default("M4")
+  memoryGb        Int          @default(16)
+  storageGb       Int          @default(256)
+  status          DeviceStatus @default(idle)
+  note            String?
+  currentLeaseId  String?      @unique
+  lastHeartbeatAt DateTime?
+  createdAt       DateTime     @default(now())
+  leases          Lease[]
+
+  @@index([status])
+}
+
+model Lease {
+  id         String         @id @default(cuid())
+  deviceId   String
+  device     Device         @relation(fields: [deviceId], references: [id])
+  userId     String
+  user       User           @relation(fields: [userId], references: [id])
+  orderId    String
+  order      Order          @relation(fields: [orderId], references: [id])
+  startAt    DateTime
+  endAt      DateTime
+  graceEndAt DateTime
+  status     LeaseStatus    @default(active)
+  createdAt  DateTime       @default(now())
+  credential Credential?
+  renewals   LeaseRenewal[]
+  tickets    Ticket[]
+
+  @@index([userId])
+  @@index([status, endAt])
+}
+
+/// 每次续费订单确认后延长一次，保留审计轨迹
+model LeaseRenewal {
+  id        String   @id @default(cuid())
+  leaseId   String
+  lease     Lease    @relation(fields: [leaseId], references: [id])
+  orderId   String   @unique
+  prevEndAt DateTime
+  newEndAt  DateTime
+  createdAt DateTime @default(now())
+}
+
+model Credential {
+  id             String   @id @default(cuid())
+  leaseId        String   @unique
+  lease          Lease    @relation(fields: [leaseId], references: [id])
+  uuDeviceCode   String
+  uuPasswordEnc  String
+  macUsername    String
+  macPasswordEnc String
+  updatedAt      DateTime @updatedAt
+}
+
+/// 用户或管理员每次查看凭证都记一条
+model CredentialView {
+  id        String   @id @default(cuid())
+  leaseId   String
+  userId    String?
+  adminId   String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([leaseId, createdAt])
+}
+
+model RecycleRecord {
+  id                  String   @id @default(cuid())
+  deviceId            String
+  leaseId             String?
+  wipedAndReinstalled Boolean  @default(false)
+  uuReset             Boolean  @default(false)
+  passwordChanged     Boolean  @default(false)
+  operatorId          String
+  createdAt           DateTime @default(now())
+
+  @@index([deviceId])
+}
+
+model Refund {
+  id             String       @id @default(cuid())
+  orderId        String
+  order          Order        @relation(fields: [orderId], references: [id])
+  reason         String
+  amountCents    Int
+  calcDetail     Json
+  status         RefundStatus @default(refunding)
+  xianyuRefundNo String?
+  operatorId     String
+  createdAt      DateTime     @default(now())
+}
+
+model Ticket {
+  id          String       @id @default(cuid())
+  no          String       @unique
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  leaseId     String?
+  lease       Lease?       @relation(fields: [leaseId], references: [id])
+  category    String
+  content     String
+  attachments Json         @default("[]")
+  status      TicketStatus @default(open)
+  assigneeId  String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  notes       TicketNote[]
+}
+
+model TicketNote {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  adminId   String
+  content   String
+  createdAt DateTime @default(now())
+}
+
+/// 通知渠道：邮件 + 站内信（Telegram 本期不做）
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  channel   String // email | site
+  template  String
+  payload   Json
+  readAt    DateTime?
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model AdminUser {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  name               String
+  passwordHash       String
+  role               AdminRole
+  totpSecretEnc      String?
+  totpEnabledAt      DateTime?
+  /// 恢复码哈希列表，使用后移除
+  recoveryCodeHashes Json      @default("[]")
+  status             String    @default("active")
+  createdAt          DateTime  @default(now())
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model PriceChangeLog {
+  id           String   @id @default(cuid())
+  term         Term
+  oldCents     Int
+  newCents     Int
+  adminId      String
+  /// 运营是否已在闲鱼同步改价
+  xianyuSynced Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  target    String
+  detail    Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([target])
+}
