@@ -11,7 +11,7 @@ export const DB_URL = 'postgresql://nyd:nyd@localhost:54330/nyd_e2e';
 
 /** 直接读库，用来核对界面之外的后端状态（凭证查看记录等） */
 export function prisma() {
-  const req = createRequire(resolve(__dirname, '../apps/api/package.json'));
+  const req = createRequire(resolve(process.cwd(), 'apps/api/package.json'));
   const { PrismaClient } = req('@prisma/client');
   return new PrismaClient({ datasources: { db: { url: DB_URL } } });
 }

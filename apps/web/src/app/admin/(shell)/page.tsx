@@ -1,7 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useAdmin } from '@/components/admin/context';
 import { ErrorBox, Loading } from '@/components/admin/kit';
+import { roleCanOpen } from '@/components/admin/nav-roles';
 import { yuan } from '@/lib/format';
 import { useApi } from '@/lib/hooks';
 import type { Dashboard } from '@/lib/admin-types';
@@ -119,11 +121,12 @@ function Utilization({ u }: { u: Dashboard['utilization'] }) {
 }
 
 export default function DashboardPage() {
+  const { admin } = useAdmin();
   const { data: d, error, loading } = useApi<Dashboard>('/admin/dashboard');
   if (loading) return <Loading />;
   if (error || !d) return <ErrorBox error={error} />;
   const kpi = (href: string, cls: string, label: string, val: React.ReactNode, sub: string) => (
-    <Link className={`kpi ${cls}`} href={href}>
+    <Link className={`kpi ${cls}`} href={roleCanOpen(admin.role, href) ? href : '/admin'}>
       <small>{label}</small>
       <b>{val}</b>
       <span>{sub}</span>
@@ -167,12 +170,14 @@ export default function DashboardPage() {
             待办<Link href="/admin/orders">全部订单 →</Link>
           </h3>
           <div className="todo">
-            {d.todos.length === 0 && (
+            {d.todos.filter((t) => roleCanOpen(admin.role, t.href)).length === 0 && (
               <div className="empty" style={{ padding: 24 }}>
                 没有待办事项
               </div>
             )}
-            {d.todos.map((t, i) => (
+            {d.todos
+              .filter((t) => roleCanOpen(admin.role, t.href))
+              .map((t, i) => (
               <Link key={i} href={t.href} className="todo-i">
                 <b>{t.text}</b>
                 <span className="sp" />
