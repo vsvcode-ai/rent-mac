@@ -371,7 +371,6 @@ export function OrderDetailModal({
     setO(null);
     setErr('');
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [no]);
   const changed = () => {
     onChanged();
