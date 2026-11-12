@@ -11,6 +11,8 @@ export interface PlanItem {
 }
 export interface PlansResponse {
   available: number;
+  /** 没有离线的使用中机器 */
+  allOnline?: boolean;
   total: number;
   plans: PlanItem[];
 }

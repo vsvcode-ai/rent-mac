@@ -13,13 +13,20 @@ export function SiteFooter() {
           <div>
             <Brand />
             <p>马来西亚机房自营的 Mac mini 租赁。独享实体机，独立固定 IP，用 UU 远程随时连接。</p>
-            {data && <span className="status">所有机器运行正常 · {data.available} 台可租</span>}
+            {data && (
+              <span className="status">
+                {data.allOnline === false ? '部分机器离线，正在处理' : '所有机器运行正常'} ·{' '}
+                {data.available} 台可租
+              </span>
+            )}
           </div>
           <div>
             <h4>产品</h4>
             <Link href="/#pricing">套餐价格</Link>
             <Link href="/#why">专属设备</Link>
             <Link href="/#scenes">使用场景</Link>
+            <Link href="/blog">博客</Link>
+            <Link href="/consult">多台 / 定制咨询</Link>
           </div>
           <div>
             <h4>帮助</h4>
