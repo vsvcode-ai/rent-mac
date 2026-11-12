@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>帮助中心 · 南洋桌面</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="wrap">
+  <div class="help-hero"><div class="kicker">帮助中心</div><h1>连接你的 Mac，只需几步</h1><p class="muted" style="margin-top:12px;font-size:17px">开通后用 UU 远程连接，电脑和手机都可以。</p></div>
+
+  <div class="os-tabs" id="os-tabs"><button class="on" data-o="mac">Mac</button><button data-o="win">Windows</button><button data-o="ios">iPhone / iPad</button><button data-o="and">安卓</button></div>
+
+  <div class="tut on" id="t-mac"></div>
+  <div class="tut" id="t-win"></div>
+  <div class="tut" id="t-ios"></div>
+  <div class="tut" id="t-and"></div>
+
+  <div class="alert info" style="margin-top:24px;max-width:780px;margin-left:auto;margin-right:auto"><span>i</span><div><b>连不上？</b>先确认设备代码和密码无误；再检查本机网络；仍然不行，到「<a class="link" href="account.html#tickets">我的账户 → 工单</a>」提交，附上截图。机器离线我们会主动处理。</div></div>
+
+  <section class="sec" id="faq" style="padding-bottom:40px">
+    <div class="sec-head" style="margin-bottom:32px"><h2 style="font-size:32px">常见问题</h2></div>
+    <div class="faq" id="faqs"></div>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="assets/app.js"></script>
+<script>
+NYD.init('help');
+const shot = (kind) => ({
+  dl: `<div class="ui"><b style="font-size:13px">UU 远程</b><i></i><i style="width:70%"></i><i class="b"></i></div>`,
+  code: `<div class="ui"><small class="muted">设备代码</small><div class="code">583 920 174</div><i></i><small class="muted">连接密码</small><div class="code">••••••••</div><i class="b" style="width:100%"></i></div>`,
+  ok: `<div class="ui" style="min-width:210px"><div style="display:flex;gap:5px;margin-bottom:8px"><span style="width:7px;height:7px;border-radius:50%;background:var(--hl3)"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--hl3)"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--hl3)"></span></div><div style="background:var(--canvas);border:1px solid var(--hl);border-radius:6px;padding:14px;text-align:center"><b style="font-weight:500">macOS 登录</b><div class="mono" style="font-size:11px;margin-top:4px;color:var(--ink3)">nydesk</div><i></i></div></div>`,
+  phone: `<div class="ui" style="min-width:90px;border-radius:16px;padding:14px 10px;text-align:center"><b style="font-size:11px">连接中…</b><i></i><i style="width:60%;margin:6px auto"></i><i class="b" style="width:100%"></i></div>`,
+})[kind];
+const S = (n, h, p, k) => `<div class="st"><div class="no">STEP ${n}</div><h4>${h}</h4><p>${p}</p><div class="shot">${shot(k)}</div></div>`;
+const T = {
+  mac: [['在你的 Mac 上安装 UU 远程', '从 UU 远程官网下载 macOS 版本，拖入「应用程序」后打开，按提示授权。', 'dl'], ['输入设备代码和密码', '在「账户 → 我的设备」里复制 UU 设备代码和连接密码，粘贴到 UU 远程主界面。', 'code'], ['看到远程桌面', '连接成功后会看到马来西亚那台 Mac mini 的桌面。', 'ok'], ['输入 macOS 登录密码', '首次进入需要输入 macOS 用户名和密码（同在「我的设备」里）。登录后可修改密码。', 'ok']],
+  win: [['在 Windows 上安装 UU 远程', '下载 Windows 版安装包，安装后打开。', 'dl'], ['输入设备代码和密码', '复制「我的设备」里的 UU 设备代码和连接密码。', 'code'], ['看到远程桌面', '连接成功后即可用鼠标键盘操作。快捷键以远程 Mac 为准，Ctrl 对应 ⌘ 请在设置里调整。', 'ok'], ['输入 macOS 登录密码', '输入 macOS 用户名和密码登录。', 'ok']],
+  ios: [['在 App Store 安装 UU 远程', '搜索「UU 远程」下载安装，允许通知权限。', 'dl'], ['添加设备', '输入设备代码和连接密码，点击连接。', 'code'], ['触控操作', '单指移动鼠标，双指滚动，长按右键。可随时查看任务进度或日志。', 'phone'], ['想用外接键盘？', '蓝牙键盘接入后可直接输入，适合在外面快速处理事情。', 'phone']],
+  and: [['安装 UU 远程', '在应用商店搜索「UU 远程」安装。', 'dl'], ['添加设备', '输入设备代码和连接密码，点击连接。', 'code'], ['触控操作', '单指移动鼠标，双指缩放，长按右键。', 'phone'], ['保持后台连接', '在系统设置里允许 UU 远程后台运行，避免切换应用后断开。', 'phone']],
+};
+Object.entries(T).forEach(([k, arr]) => document.getElementById('t-' + k).innerHTML = arr.map((s, i) => S(i + 1, ...s)).join(''));
+document.querySelectorAll('#os-tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#os-tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.tut').forEach(t => t.classList.toggle('on', t.id === 't-' + b.dataset.o));
+});
+const FAQ = [
+  ['机器部署在哪里？', '全部在马来西亚机房，首批 200 台 Mac mini M4（16GB / 256GB）。'],
+  ['为什么要到闲鱼付款？', '闲鱼提供担保交易，付款、发货、确认收货、售后都有记录。你在网站下单拿到订单号，到闲鱼拍下对应商品并留言订单号，我们核对后开通。'],
+  ['付款后多久能用？', '客服核对收款后，7 天内开通，通常更快。租期从开通当天开始算。'],
+  ['开通后要在闲鱼点确认收货吗？', '建议你确认能正常连接后再点确认收货。我们会在开通后提醒你。'],
+  ['宽带怎么收费？', '独立 IP 宽带已包含在租金里，不额外收费。'],
+  ['怎么续费？', '到「我的账户 → 我的设备」点「续费」，生成续费订单，同样到闲鱼付款，客服确认后自动延长到期时间。到期前 7 / 3 / 1 天我们会邮件提醒。'],
+  ['到期后数据会怎样？', '到期后有 3 天宽限期，期间续费可保留全部数据。宽限期结束后机器会被回收并抹盘重装，数据无法找回，请提前备份。'],
+  ['可以在上面用 Claude 等 AI 工具吗？', '可以，请使用你自己的账号。我们只提供机器，不代购、不转售任何第三方账号。'],
+  ['禁止哪些用途？', '挖矿、发送垃圾邮件、网络攻击与扫描、传播违法内容等。违反会被直接停机且不退款。详见可接受使用政策。'],
+  ['能退款吗？', '开通前全额退款，开通后的规则见<a class="link" href="refund.html">退款政策</a>。'],
+];
+document.getElementById('faqs').innerHTML = FAQ.map((f, i) => `<details ${i === 0 ? 'open' : ''}><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join('');
+</script>
+</body>
+</html>

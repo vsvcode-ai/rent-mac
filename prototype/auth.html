@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>登录 · 南洋桌面</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="auth">
+  <div class="auth-side">
+    <a class="brand" href="index.html" id="b1"></a>
+    <h2>一台专属 Mac，<br>在南洋等你。</h2>
+    <p>注册后即可下单，在「我的设备」里查看连接信息，到期前我们会提醒你续费。</p>
+    <ul><li>马来西亚机房，独享实体 Mac mini</li><li>独立固定 IP，宽带已包含</li><li>闲鱼担保交易，7 天内开通</li></ul>
+  </div>
+  <div class="auth-main">
+    <div class="auth-box">
+      <a class="link" href="index.html" style="font-size:14px">← 返回首页</a>
+      <h1 id="ttl" style="margin-top:18px">欢迎回来</h1>
+      <div class="tabs-s"><button class="on" data-m="login">登录</button><button data-m="reg">创建账户</button></div>
+      <form id="f" novalidate>
+        <div class="field"><label>邮箱</label><input class="input" id="email" type="email" placeholder="you@example.com" autocomplete="email"><div class="errmsg">请输入有效的邮箱地址</div></div>
+        <div class="field reg-only" style="display:none"><label>邮箱验证码</label>
+          <div class="input-btn"><input class="input" id="code" inputmode="numeric" maxlength="6" placeholder="6 位验证码"><button type="button" class="btn btn-line" id="sendcode" style="min-width:116px">获取验证码</button></div>
+          <div class="hint">原型中任意 6 位数字均可通过</div><div class="errmsg">请输入 6 位验证码</div></div>
+        <div class="field"><label>密码<small class="reg-only" style="display:none">至少 8 位</small></label><input class="input" id="pwd" type="password" placeholder="••••••••" autocomplete="current-password"><div class="errmsg">密码至少 8 位</div></div>
+        <label class="check reg-only" style="display:none;margin-bottom:18px"><input type="checkbox" id="agree"><span>我已阅读并同意<a class="link" href="#">服务条款</a>、<a class="link" href="#">隐私政策</a>和<a class="link" href="#">可接受使用政策</a></span></label>
+        <button class="btn btn-primary btn-lg btn-block" id="submit">登录</button>
+        <p class="muted" style="font-size:13px;margin-top:16px;text-align:center" id="forgot"><a class="link" href="#" onclick="return NYD.toast('原型：发送重置密码邮件')">忘记密码？</a></p>
+      </form>
+      <div style="margin-top:28px;padding:14px 16px;background:var(--brand-l);border-radius:12px;font-size:13px;color:var(--brand-d)">
+        <b>原型演示：</b>邮箱任填（≥ 8 位密码）即可登录。首次登录会自动生成一台示范设备和一张待付款订单，方便体验完整流程。
+        <a class="link" href="#" id="fill">一键填入演示账号</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="assets/app.js"></script>
+<script>
+document.getElementById('b1').innerHTML = NYD.MARK + '<span>南洋桌面</span>';
+const next = new URLSearchParams(location.search).get('next') || 'account.html';
+let mode = 'login';
+const $ = id => document.getElementById(id);
+document.querySelectorAll('.tabs-s button').forEach(b => b.onclick = () => {
+  mode = b.dataset.m;
+  document.querySelectorAll('.tabs-s button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.reg-only').forEach(e => e.style.display = mode === 'reg' ? '' : 'none');
+  $('ttl').textContent = mode === 'login' ? '欢迎回来' : '创建账户';
+  $('submit').textContent = mode === 'login' ? '登录' : '注册并登录';
+  $('forgot').style.display = mode === 'login' ? '' : 'none';
+  $('pwd').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+});
+let cd = 0;
+$('sendcode').onclick = () => {
+  if (cd) return;
+  if (!/^\S+@\S+\.\S+$/.test($('email').value)) { $('email').closest('.field').classList.add('bad'); $('email').classList.add('err'); return; }
+  cd = 60; NYD.toast('验证码已发送（原型：任意 6 位数字）');
+  const t = setInterval(() => { cd--; $('sendcode').textContent = cd > 0 ? cd + 's 后重发' : '获取验证码'; if (cd <= 0) clearInterval(t); }, 1000);
+  $('sendcode').textContent = '60s 后重发';
+};
+$('fill').onclick = e => { e.preventDefault(); $('email').value = 'demo@nanyangdesk.com'; $('pwd').value = 'demo12345'; };
+function bad(id, cond) { const f = $(id).closest('.field'); f.classList.toggle('bad', cond); $(id).classList.toggle('err', cond); return cond; }
+$('f').onsubmit = e => {
+  e.preventDefault();
+  let err = false;
+  err = bad('email', !/^\S+@\S+\.\S+$/.test($('email').value)) || err;
+  err = bad('pwd', $('pwd').value.length < 8) || err;
+  if (mode === 'reg') { err = bad('code', !/^\d{6}$/.test($('code').value)) || err; if (!$('agree').checked) { NYD.toast('请先勾选同意相关条款'); err = true; } }
+  if (err) return;
+  NYD.login($('email').value.trim());
+  $('submit').disabled = true; $('submit').textContent = '正在跳转…';
+  setTimeout(() => location.href = next, 450);
+};
+</script>
+</body>
+</html>

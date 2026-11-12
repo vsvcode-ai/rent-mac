@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>管理后台 · 南洋桌面</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/admin.css">
+</head>
+<body class="adm">
+<div class="shell">
+  <aside class="aside">
+    <a class="brand" href="admin.html" id="ab"></a>
+    <h6>工作台</h6>
+    <a data-v="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>看板</a>
+    <a data-v="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l2 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7z"/><path d="M4 7h16M9 12h6"/></svg>订单<span class="cnt y" id="c-orders"></span></a>
+    <a data-v="queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>开通队列<span class="cnt" id="c-queue"></span></a>
+    <h6>资产</h6>
+    <a data-v="devices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="8" rx="2.5"/><path d="M7 20h10"/></svg>机器台账</a>
+    <a data-v="recycle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>回收队列<span class="cnt y" id="c-recycle"></span></a>
+    <h6>服务</h6>
+    <a data-v="tickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>工单<span class="cnt y" id="c-tickets"></span></a>
+    <a data-v="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>设置与权限</a>
+    <div class="who"><i>L</i><div><b>Lin</b><small>运维 · 超级权限（演示）</small></div></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar"><h1 id="page-title">看板</h1><div class="sp"></div><input class="search" id="gsearch" placeholder="搜索订单号 / 邮箱 / 闲鱼单号 / 机器编号"><span class="role">演示数据</span><a class="btn btn-ghost btn-sm" href="index.html">← 前台</a></div>
+
+    <section class="vw" id="v-dash"></section>
+    <section class="vw" id="v-orders"></section>
+    <section class="vw" id="v-queue"></section>
+    <section class="vw" id="v-devices"></section>
+    <section class="vw" id="v-recycle"></section>
+    <section class="vw" id="v-tickets"></section>
+    <section class="vw" id="v-settings"></section>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-verify"><div class="modal wide" id="verify-body"></div></div>
+<div class="modal-bg" id="modal-act"><div class="modal wide" id="act-body"></div></div>
+
+<script src="assets/app.js"></script>
+<script>
+document.getElementById('ab').innerHTML = NYD.MARK + '<span>南洋桌面</span><small>ADMIN</small>';
+const S = NYD.S; S.adm = S.adm || { recycled: [] };
+const $ = id => document.getElementById(id);
+const TITLES = { dash: '看板', orders: '订单', queue: '开通队列', devices: '机器台账', recycle: '回收队列', tickets: '工单', settings: '设置与权限' };
+const D = NYD.DAY, H = NYD.HOUR;
+
+/* ---------- 机器台账（200 台，按序号生成状态） ---------- */
+const TENANTS = ['wang@example.com', 'li@startup.io', 'xu@corp.com', 'ma@cross.cn', 'zhou@dev.cn', 'chen@studio.cn', 'zhao@qq.com', 'sun@mail.com', 'liu@tech.co'];
+function ledger() {
+  const used = {}; S.orders.forEach(o => o.devices.forEach(d => used[d.code] = o));
+  return Array.from({ length: 200 }, (_, k) => {
+    const i = k + 1, info = NYD.devInfo(i), code = info.code;
+    let st, tenant = '', end = null;
+    if (used[code] && ['active'].includes(used[code].status)) { st = '使用中'; tenant = used[code].email; end = used[code].endAt; }
+    else if (S.adm.recycled.includes(code)) st = '空闲';
+    else if (i <= 62) { st = '使用中'; tenant = TENANTS[i % TENANTS.length]; end = Date.now() + ((i * 7) % 300 + 12) * D; }
+    else if (i <= 70) { st = '即将到期'; tenant = TENANTS[i % TENANTS.length]; end = Date.now() + ((i % 6) + 1) * D; }
+    else if (i <= 75) st = '回收中';
+    else if (i <= 79) st = '维护中';
+    else st = '空闲';
+    if (used[code] && used[code].status === 'done') st = S.adm.recycled.includes(code) ? '空闲' : '回收中';
+    return { ...info, i, st, tenant, end };
+  });
+}
+const stColor = { '使用中': 'ok', '即将到期': 'warn', '回收中': 'brand', '维护中': 'danger', '空闲': 'info' };
+const idleList = () => ledger().filter(d => d.st === '空闲' && !S.orders.some(o => o.devices.some(x => x.code === d.code)));
+
+/* ---------- 工具 ---------- */
+const remain = o => { const l = NYD.deadline(o) - Date.now(); return { l, d: Math.floor(l / D), h: Math.floor(Math.abs(l) % D / H), cls: l < 0 ? 'danger' : l < 2 * D ? 'warn' : '' }; };
+const pricing = o => NYD.price(o.plan, o.qty);
+const cnt = st => S.orders.filter(o => st.includes(o.status)).length;
+function badges() {
+  const set = (id, n) => { $(id).textContent = n; $(id).style.display = n ? '' : 'none'; };
+  set('c-orders', cnt(['verifying'])); set('c-queue', cnt(['queued'])); set('c-tickets', S.tickets.filter(t => t.status !== '已解决').length);
+  set('c-recycle', ledger().filter(d => d.st === '回收中').length);
+}
+
+/* ---------- 看板 ---------- */
+function vDash() {
+  const lg = ledger(), c = s => lg.filter(d => d.st === s).length;
+  const over = S.orders.filter(o => o.status === 'queued' && remain(o).l < 2 * D).length;
+  const rev = S.orders.filter(o => o.paidAt && o.paidAt > Date.now() - 30 * D && !['cancelled', 'refund', 'failed'].includes(o.status)).reduce((a, o) => a + pricing(o).total, 0);
+  const days = Array.from({ length: 14 }, (_, k) => { const t = new Date(Date.now() - (13 - k) * D); const base = [3, 5, 4, 6, 2, 3, 7, 5, 4, 6, 8, 5, 4, 0][k]; const real = k === 13 ? S.orders.filter(o => o.createdAt > Date.now() - D).length : 0; return { l: `${t.getMonth() + 1}/${t.getDate()}`, n: base + real }; });
+  const mx = Math.max(...days.map(d => d.n)), tot = 200;
+  const seg = [['使用中', '#f2f1ec', c('使用中')], ['即将到期', '#ffb547', c('即将到期')], ['回收中', '#46463f', c('回收中')], ['维护中', '#ff5a4e', c('维护中')], ['空闲', '#262623', c('空闲') - (200 - lg.length)]];
+  let acc = 0; const grad = seg.map(([, col, n]) => { const a = acc / tot * 100; acc += n; return `${col} ${a}% ${acc / tot * 100}%`; }).join(',');
+  const todo = [
+    ...S.orders.filter(o => o.status === 'verifying').sort((a, b) => a.paidAt - b.paidAt).slice(0, 3).map(o => `<div class="todo-i"><span class="pill info">待核对</span><b>${o.email}</b><span class="mono">${o.no}</span><span class="sp"></span><span class="muted">${NYD.ago(o.paidAt)}提交</span><button class="btn btn-primary xs" onclick="openVerify('${o.no}')">核对</button></div>`),
+    ...S.orders.filter(o => o.status === 'queued').sort((a, b) => NYD.deadline(a) - NYD.deadline(b)).slice(0, 3).map(o => { const r = remain(o); return `<div class="todo-i"><span class="pill ${r.cls || 'brand'}">待开通</span><b>${o.email}</b><span class="mono">${o.no} · ${o.qty} 台</span><span class="sp"></span><span class="muted">${r.l < 0 ? '已超期 ' + (-r.d - 1) + ' 天' : '剩 ' + r.d + ' 天 ' + r.h + ' 时'}</span><button class="btn btn-dark xs" onclick="openAct('${o.no}')">开通</button></div>`; }),
+  ];
+  $('v-dash').innerHTML = `<div class="kpis">
+    <div class="kpi ${cnt(['verifying']) ? 'warn-k' : ''}" onclick="go('orders','verifying')"><small>待核对</small><b>${cnt(['verifying'])}</b><span>需核对闲鱼收款</span></div>
+    <div class="kpi ${over ? 'alert-k' : ''}" onclick="go('queue')"><small>待开通</small><b>${cnt(['queued'])}</b><span>${over ? '⚠ ' + over + ' 单即将/已超期' : '均在时限内'}</span></div>
+    <div class="kpi"><small>在租台数</small><b>${c('使用中') + c('即将到期')}</b><span>总计 200 台</span></div>
+    <div class="kpi" onclick="go('devices')"><small>空闲台数</small><b>${NYD.idleCount()}</b><span>可立即分配</span></div>
+    <div class="kpi"><small>7 天内到期</small><b>${c('即将到期')}</b><span>需提醒续费</span></div>
+    <div class="kpi"><small>近 30 天收入</small><b style="font-size:24px;line-height:39px">${NYD.money(rev)}</b><span>已收款订单</span></div></div>
+  <div class="g2"><div class="box"><h3>待办<a onclick="go('orders')">全部订单 →</a></h3><div class="todo">${todo.join('') || '<div class="empty" style="padding:24px">没有待办事项</div>'}</div>
+    <h3 style="margin-top:26px">近 14 天新订单</h3><div class="chart">${days.map((d, k) => `<div class="${k === 13 ? 't' : ''}"><b>${d.n}</b><i style="height:${d.n / mx * 100}%"></i>${d.l}</div>`).join('')}</div></div>
+  <div class="box"><h3>机房利用率<span class="muted" style="font-weight:400;font-size:12.5px">马来西亚 · 200 台</span></h3>
+    <div class="donut" style="background:conic-gradient(${grad})"><span><b>${Math.round((c('使用中') + c('即将到期')) / 2)}%</b>在租</span></div>
+    <div class="lg">${seg.map(([n, col, v]) => `<span><i style="background:${n === '空闲' ? '#d7ff3a' : col}"></i>${n}<b>${v}</b></span>`).join('')}</div>
+    <h3 style="margin-top:26px">即将到期<a onclick="go('devices')">台账 →</a></h3>
+    <div class="todo">${lg.filter(d => d.st === '即将到期').sort((a, b) => a.end - b.end).slice(0, 4).map(d => `<div class="todo-i"><b class="mono" style="font-size:12.5px">${d.code}</b><span class="muted" style="font-size:12.5px">${d.tenant}</span><span class="sp"></span><span class="pill warn">${Math.max(1, Math.ceil((d.end - Date.now()) / D))} 天</span></div>`).join('')}</div></div></div>`;
+}
+
+/* ---------- 订单 ---------- */
+let oFilter = 'all', oQuery = '';
+function vOrders() {
+  const F = [['all', '全部'], ['pending', '待付款'], ['verifying', '待核对'], ['queued', '待开通'], ['active', '使用中'], ['done', '已完成'], ['failed', '核对失败'], ['cancelled', '已取消']];
+  let list = S.orders.slice().sort((a, b) => b.createdAt - a.createdAt).filter(o => oFilter === 'all' || o.status === oFilter).filter(o => !oQuery || [o.no, o.email, o.xyNo, o.xyNick].join(' ').toLowerCase().includes(oQuery));
+  $('v-orders').innerHTML = `<div class="bar-h">${F.map(([k, t]) => `<span class="chip ${oFilter === k ? 'on' : ''}" data-f="${k}">${t}<em>${k === 'all' ? S.orders.length : cnt([k])}</em></span>`).join('')}</div>
+  <div class="tw"><table class="tbl"><thead><tr><th>订单号</th><th>用户</th><th>类型</th><th>套餐</th><th>应收</th><th>闲鱼订单号</th><th>状态</th><th>创建时间</th><th></th></tr></thead><tbody>${list.map(o => {
+    const p = NYD.plan(o.plan), pr = pricing(o), r = o.status === 'queued' ? remain(o) : null;
+    const act = o.status === 'verifying' ? `<button class="btn btn-primary xs" onclick="openVerify('${o.no}')">核对收款</button>` : o.status === 'queued' ? `<button class="btn btn-dark xs" onclick="openAct('${o.no}')">分配开通</button>` : o.status === 'pending' ? `<button class="btn btn-line xs" onclick="NYD.toast('已提醒用户付款（原型）')">催付</button>` : `<button class="btn btn-ghost xs" onclick="NYD.toast('原型：订单详情抽屉')">详情</button>`;
+    return `<tr class="${r && r.cls ? 'row-' + r.cls : ''}"><td class="mono">${o.no}</td><td>${o.email}<small>${[o.contact.wechat && '微信 ' + o.contact.wechat, o.contact.telegram && 'TG ' + o.contact.telegram].filter(Boolean).join(' · ')}</small></td><td>${o.kind === 'renew' ? '续费' : '新租'}</td><td>${p.name} × ${o.qty}<small>${p.months} 个月</small></td><td><b>${NYD.money(pr.total)}</b></td><td class="mono">${o.xyNo || '—'}<small>${o.xyNick || ''}</small></td><td>${NYD.pill(o.status)}${r ? `<small style="color:var(--${r.cls || 'ink3'})">${r.l < 0 ? '超期' : '剩 ' + r.d + ' 天'}</small>` : ''}</td><td>${NYD.fmtDate(o.createdAt)}<small>${NYD.ago(o.createdAt)}</small></td><td>${act}</td></tr>`;
+  }).join('') || '<tr><td colspan="9" class="empty">没有符合条件的订单</td></tr>'}</tbody></table></div>`;
+  $('v-orders').querySelectorAll('.chip').forEach(c => c.onclick = () => { oFilter = c.dataset.f; vOrders(); });
+}
+
+/* ---------- 核对收款 ---------- */
+let cur = null;
+window.openVerify = no => {
+  cur = NYD.getOrder(no); const p = NYD.plan(cur.plan), pr = pricing(cur);
+  $('verify-body').innerHTML = `<button class="x" onclick="NYD.closeModal('verify')">✕</button><h3>核对收款</h3><p class="muted" style="font-size:13.5px">请到闲鱼后台找到该订单，核对金额、数量、留言中的网站订单号。</p>
+  <dl class="kv" style="margin:18px 0"><dt>网站订单号</dt><dd class="mono">${cur.no}</dd><dt>用户</dt><dd>${cur.email}</dd><dt>闲鱼订单号</dt><dd class="mono">${cur.xyNo}（${cur.xyNick || '—'}）</dd><dt>类型</dt><dd>${cur.kind === 'renew' ? '续费 ' + cur.renewOf : '新租'}</dd></dl>
+  <div class="cmpx"><div><small>订单应收</small><b>${NYD.money(pr.total)}</b><div class="muted">${NYD.money(p.monthly * p.months)} × ${cur.qty} 台（${p.name}）</div></div>
+  <div><small>闲鱼实收（可修改）</small><div style="display:flex;gap:8px;align-items:center"><b>¥</b><input class="input" id="v-amt" value="${pr.total}" style="height:36px;font-size:18px;font-weight:700" inputmode="numeric"></div>
+  <div class="field" style="margin:8px 0 0"><label style="font-size:12px">闲鱼拍下数量</label><input class="input" id="v-qty" value="${cur.qty}" style="height:34px;width:90px" inputmode="numeric"></div></div></div>
+  <div class="match ok" id="v-match">✓ 金额与数量一致</div>
+  <div class="chk" style="margin:16px 0"><label><input type="checkbox" id="v-c1"> 闲鱼已显示已付款</label><label><input type="checkbox" id="v-c2"> 留言含网站订单号</label></div>
+  <div style="display:flex;gap:10px"><button class="btn btn-line btn-block" id="v-fail">标记核对失败</button><button class="btn btn-primary btn-block" id="v-ok">确认收款</button></div>
+  <p class="fine">确认后别忘了在闲鱼点「发货」，备注「7 天内开通」。</p>`;
+  const chk = () => { const ok = +$('v-amt').value === pr.total && +$('v-qty').value === cur.qty; const m = $('v-match'); m.className = 'match ' + (ok ? 'ok' : 'bad'); m.textContent = ok ? '✓ 金额与数量一致' : '✗ 金额或数量与订单不符，请核实后再确认'; };
+  $('v-amt').oninput = $('v-qty').oninput = chk;
+  $('v-fail').onclick = () => { NYD.setStatus(cur.no, 'failed'); NYD.closeModal('verify'); NYD.toast('已标记核对失败，请联系用户'); refresh(); };
+  $('v-ok').onclick = () => {
+    if (+$('v-amt').value !== pr.total || +$('v-qty').value !== cur.qty) return NYD.toast('金额或数量不符，无法确认');
+    if (!$('v-c1').checked || !$('v-c2').checked) return NYD.toast('请先勾选两项核对清单');
+    if (cur.kind === 'renew') { // 续费：自动延长到期时间
+      const host = S.orders.find(o => o.devices.some(d => d.code === cur.renewOf));
+      if (host) host.endAt = NYD.addMonths(Math.max(host.endAt, Date.now()), p.months);
+      NYD.setStatus(cur.no, 'done', { verifiedAt: Date.now(), activatedAt: Date.now(), endAt: host && host.endAt, devices: [] });
+      NYD.toast('续费已确认，到期时间已延长');
+    } else { NYD.setStatus(cur.no, 'queued', { verifiedAt: Date.now() }); NYD.toast('已确认收款，进入开通队列'); }
+    NYD.closeModal('verify'); refresh();
+  };
+  NYD.modal('verify');
+};
+
+/* ---------- 开通 ---------- */
+window.openAct = no => {
+  cur = NYD.getOrder(no); const idle = idleList().slice(0, cur.qty), p = NYD.plan(cur.plan);
+  const rnd = () => ({ uu: String(Math.floor(100000000 + Math.random() * 899999999)), up: NYD.rnd(8), mp: NYD.rnd(4) + '-' + NYD.rnd(4) + NYD.rnd(4) });
+  $('act-body').innerHTML = `<button class="x" onclick="NYD.closeModal('act')">✕</button><h3>分配机器并开通</h3>
+  <p class="muted" style="font-size:13.5px">${cur.email} · ${p.name} × ${cur.qty} 台 · 订单 ${cur.no}。已为你从空闲机器里挑好，UU 信息已随机生成，请在机器上配置后确认。</p>
+  <div class="note-tip" style="margin-top:14px">租期 <b>${p.months} 个月</b>，从点击「完成开通」当天开始计算，预计到期 <b id="a-end"></b></div>
+  <div style="display:grid;gap:12px;max-height:46vh;overflow:auto;padding-right:4px">${idle.map((d, k) => { const r = rnd(); return `<div class="dblock" data-code="${d.code}"><h5><span>${d.code}</span><span class="muted">${d.rack} · ${d.ip}</span></h5>
+    <div class="dgrid"><div class="field"><label>UU 设备代码</label><input class="input mono" data-k="uuCode" value="${r.uu}"></div><div class="field"><label>UU 连接密码</label><input class="input mono" data-k="uuPwd" value="${r.up}"></div>
+    <div class="field"><label>macOS 用户名</label><input class="input mono" data-k="macUser" value="nydesk"></div><div class="field"><label>macOS 登录密码</label><input class="input mono" data-k="macPwd" value="${r.mp}"></div></div></div>`; }).join('') || '<div class="empty">没有空闲机器了，请先回收或补货</div>'}</div>
+  <div class="chk" style="margin:16px 0"><label><input type="checkbox" id="a-c1"> 已重置并更换密码</label><label><input type="checkbox" id="a-c2"> 已在机器上登录 UU 远程并测试可连</label></div>
+  <button class="btn btn-primary btn-lg btn-block" id="a-ok" ${idle.length < cur.qty ? 'disabled' : ''}>完成开通并通知用户</button>`;
+  $('a-end').textContent = NYD.fmtDate(NYD.addMonths(Date.now(), p.months));
+  $('a-ok').onclick = () => {
+    if (!$('a-c1').checked || !$('a-c2').checked) return NYD.toast('请先勾选两项开通检查');
+    const devices = [...document.querySelectorAll('#act-body .dblock')].map(b => { const code = b.dataset.code, info = idle.find(x => x.code === code), o = { code, ip: info.ip }; b.querySelectorAll('input[data-k]').forEach(i => o[i.dataset.k] = i.value); return o; });
+    NYD.setStatus(cur.no, 'active', { devices, activatedAt: Date.now(), endAt: NYD.addMonths(Date.now(), p.months), fresh: true });
+    NYD.closeModal('act'); NYD.toast('已开通，用户将收到邮件和站内通知'); refresh();
+  };
+  NYD.modal('act');
+};
+['verify', 'act'].forEach(id => $('modal-' + id).addEventListener('click', e => { if (e.target.id === 'modal-' + id) NYD.closeModal(id); }));
+
+/* ---------- 开通队列 ---------- */
+function vQueue() {
+  const list = S.orders.filter(o => o.status === 'queued').sort((a, b) => NYD.deadline(a) - NYD.deadline(b));
+  $('v-queue').innerHTML = `<div class="note-tip">按截止时间排序（付款后 7 天）。剩余 &lt; 2 天标黄，超期标红并通知管理员。建议提前把空闲机器预装好系统和 UU 远程。</div>` + (list.map(o => {
+    const r = remain(o), pct = Math.max(0, Math.min(100, (1 - r.l / (7 * D)) * 100)), p = NYD.plan(o.plan);
+    return `<div class="q-card ${r.cls}"><div class="ring" style="--p:${pct};--c:${r.cls === 'danger' ? '#ff5a4e' : r.cls === 'warn' ? '#ffb547' : '#f2f1ec'};position:relative"><b>${r.l < 0 ? '超' : r.d}<small>${r.l < 0 ? '期' : '天'}</small></b></div>
+    <div><h4>${o.email} ${r.cls ? `<span class="pill ${r.cls}">${r.l < 0 ? '已超期' : '即将超期'}</span>` : ''}</h4><p><span class="mono">${o.no}</span> · ${p.name} × ${o.qty} 台 · 确认收款 ${NYD.ago(o.verifiedAt || o.paidAt)} · 截止 ${NYD.fmtDate(NYD.deadline(o))}</p><p>联系：${[o.contact.wechat && '微信 ' + o.contact.wechat, o.contact.telegram && 'TG ' + o.contact.telegram].filter(Boolean).join(' · ')}</p></div>
+    <div><button class="btn btn-dark" onclick="openAct('${o.no}')">分配开通</button></div></div>`;
+  }).join('') || '<div class="box empty"><b>开通队列为空</b>所有已收款订单都已开通。</div>');
+}
+
+/* ---------- 台账 ---------- */
+let dF = '全部', dQ = '', dPage = 1;
+function vDevices() {
+  const lg = ledger(), F = ['全部', '使用中', '即将到期', '回收中', '维护中', '空闲'];
+  let list = lg.filter(d => dF === '全部' || d.st === dF).filter(d => !dQ || [d.code, d.ip, d.tenant, d.rack].join(' ').toLowerCase().includes(dQ));
+  const per = 20, pages = Math.max(1, Math.ceil(list.length / per)); dPage = Math.min(dPage, pages); list = list.slice((dPage - 1) * per, dPage * per);
+  $('v-devices').innerHTML = `<div class="bar-h">${F.map(f => `<span class="chip ${dF === f ? 'on' : ''}" data-f="${f}">${f}<em>${f === '全部' ? 200 : lg.filter(d => d.st === f).length}</em></span>`).join('')}<span style="flex:1"></span><button class="btn btn-line btn-sm" onclick="NYD.toast('原型：下载 Excel 导入模板')">下载导入模板</button><button class="btn btn-dark btn-sm" onclick="NYD.toast('原型：上传 Excel 批量导入 200 台')">批量导入</button><button class="btn btn-line btn-sm" onclick="NYD.toast('原型：已导出 CSV')">导出</button></div>
+  <div class="tw"><table class="tbl"><thead><tr><th>编号</th><th>机柜位置</th><th>固定 IP</th><th>配置</th><th>状态</th><th>当前租户</th><th>到期</th><th></th></tr></thead><tbody>${list.map(d => `<tr><td class="mono"><b>${d.code}</b></td><td class="mono">${d.rack}</td><td class="mono">${d.ip}</td><td>M4 · 16G · 256G</td><td><span class="pill ${stColor[d.st]}">${d.st}</span></td><td>${d.tenant || '—'}</td><td>${d.end ? NYD.fmtDate(d.end) : '—'}</td><td><button class="btn btn-ghost xs" onclick="NYD.toast('原型：设备详情 / 重置凭证 / 标记维护')">管理</button></td></tr>`).join('')}</tbody></table>
+  <div class="pager"><span>共 ${lg.filter(d => dF === '全部' || d.st === dF).length} 台</span>${Array.from({ length: pages }, (_, k) => `<button class="${k + 1 === dPage ? 'on' : ''}" data-p="${k + 1}">${k + 1}</button>`).join('')}</div></div>`;
+  $('v-devices').querySelectorAll('.chip').forEach(c => c.onclick = () => { dF = c.dataset.f; dPage = 1; vDevices(); });
+  $('v-devices').querySelectorAll('.pager button').forEach(b => b.onclick = () => { dPage = +b.dataset.p; vDevices(); });
+}
+
+/* ---------- 回收 ---------- */
+function vRecycle() {
+  const list = ledger().filter(d => d.st === '回收中');
+  $('v-recycle').innerHTML = `<div class="note-tip">租期结束 + 3 天宽限期后进入回收。回收清单全部完成后，机器才会回到「空闲」可再次出租。</div>` + (list.map(d => `<div class="q-card" data-code="${d.code}" style="grid-template-columns:1fr auto"><div><h4>${d.code}<span class="pill brand">回收中</span></h4><p class="mono">${d.rack} · ${d.ip}</p>
+    <div class="chk" style="margin-top:12px"><label><input type="checkbox"> 抹盘并重装系统</label><label><input type="checkbox"> 重置 UU 远程</label><label><input type="checkbox"> 更换 macOS 密码</label><label><input type="checkbox"> 健康检查通过</label></div></div>
+    <button class="btn btn-primary" data-done="${d.code}">完成回收</button></div>`).join('') || '<div class="box empty"><b>没有待回收的机器</b></div>');
+  $('v-recycle').querySelectorAll('[data-done]').forEach(b => b.onclick = () => {
+    const card = b.closest('.q-card'); if ([...card.querySelectorAll('input')].some(i => !i.checked)) return NYD.toast('请完成全部回收检查项');
+    S.adm.recycled.push(b.dataset.done); NYD.save(); NYD.toast(b.dataset.done + ' 已回到空闲'); refresh();
+  });
+}
+
+/* ---------- 工单 ---------- */
+function vTickets() {
+  const c = { '待处理': 'warn', '处理中': 'info', '已解决': 'ok' };
+  $('v-tickets').innerHTML = `<div class="tw"><table class="tbl"><thead><tr><th>编号</th><th>用户</th><th>类型</th><th>内容</th><th>状态</th><th>提交</th><th></th></tr></thead><tbody>${S.tickets.map((t, k) => `<tr><td class="mono">${t.id}</td><td>${t.email}</td><td>${t.cat}${t.dev ? `<small>${t.dev}</small>` : ''}</td><td style="max-width:320px">${t.content}</td><td><span class="pill ${c[t.status]}">${t.status}</span></td><td>${NYD.ago(t.createdAt)}</td><td>${t.status === '已解决' ? '' : `<button class="btn btn-ghost xs" data-t="${k}">${t.status === '待处理' ? '接单' : '标记已解决'}</button>`}</td></tr>`).join('')}</tbody></table></div>`;
+  $('v-tickets').querySelectorAll('[data-t]').forEach(b => b.onclick = () => { const t = S.tickets[b.dataset.t]; t.status = t.status === '待处理' ? '处理中' : '已解决'; NYD.save(); refresh(); });
+}
+
+/* ---------- 设置 ---------- */
+function vSettings() {
+  const roles = [['查看订单', 1, 1, 1], ['核对收款 / 确认收款', 1, 0, 1], ['分配机器 / 开通', 0, 1, 1], ['查看用户凭证', 0, 1, 1], ['退款登记', 0, 0, 1], ['修改价格 / 设置', 0, 0, 1], ['回收机器', 0, 1, 1]];
+  $('v-settings').innerHTML = `<div class="g2" style="grid-template-columns:1.4fr 1fr"><div class="box"><h3>价格与闲鱼商品</h3>
+    <div class="set-row" style="font-size:12px;color:var(--ink3)"><span>租期</span><span>每月单价（¥）</span><span>闲鱼商品链接</span></div>
+    ${NYD.PLANS.map(p => `<div class="set-row"><b>${p.name}（${p.months} 个月）</b><input class="input" value="${p.monthly}" inputmode="numeric"><input class="input" value="https://m.goofish.com/item?id=NYD-${p.id.toUpperCase()}"></div>`).join('')}
+    <p class="muted" style="font-size:12.5px;margin-top:12px">改价后，请同步修改闲鱼商品价格，闲鱼标价 = 每月单价 × 月数。</p>
+    <h3 style="margin-top:26px">联系方式与时限</h3>
+    <div class="set-row"><span>客服微信</span><input class="input" value="nanyangdesk01"><span class="muted">显示在客服浮窗</span></div>
+    <div class="set-row"><span>Telegram</span><input class="input" value="@nanyangdesk"><span class="muted"></span></div>
+    <div class="set-row"><span>开通时限（天）</span><input class="input" value="7"><span class="muted">超期自动标红</span></div>
+    <div class="set-row"><span>宽限期（天）</span><input class="input" value="3"><span class="muted">到期后保留机器</span></div>
+    <div class="set-row"><span>未付款自动取消（小时）</span><input class="input" value="48"><span class="muted"></span></div>
+    <div class="set-row"><span>单笔台数上限</span><input class="input" value="10"><span class="muted">超过走咨询</span></div>
+    <button class="btn btn-primary" style="margin-top:18px" onclick="NYD.toast('设置已保存（原型）')">保存设置</button></div>
+    <div class="box"><h3>角色与权限</h3><div class="tw" style="border:0"><table class="tbl perm"><thead><tr><th>权限</th><th>客服</th><th>运维</th><th>管理员</th></tr></thead><tbody>${roles.map(r => `<tr><td>${r[0]}</td>${r.slice(1).map(v => `<td>${v ? '<span style="color:var(--ok)">●</span>' : '<span style="color:var(--ink3)">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <p class="muted" style="font-size:12.5px;margin-top:14px">查看凭证、确认收款、退款、改价都会写入审计日志。</p><h3 style="margin-top:22px">审计日志（最近）</h3>
+    <div class="todo" style="font-size:12.5px"><div class="todo-i"><span class="mono">14:20</span>Lin 查看了 NYD-MY-0021 凭证</div><div class="todo-i"><span class="mono">11:05</span>Amy 确认收款 NY2611090003</div><div class="todo-i"><span class="mono">昨天</span>Lin 完成回收 NYD-MY-0073</div></div></div></div>`;
+}
+
+/* ---------- 路由 ---------- */
+const VIEWS = { dash: vDash, orders: vOrders, queue: vQueue, devices: vDevices, recycle: vRecycle, tickets: vTickets, settings: vSettings };
+let view = 'dash';
+function show(v) { view = v; document.querySelectorAll('.aside a[data-v]').forEach(a => a.classList.toggle('on', a.dataset.v === v)); document.querySelectorAll('.vw').forEach(s => s.classList.toggle('on', s.id === 'v-' + v)); $('page-title').textContent = TITLES[v]; VIEWS[v](); badges(); }
+function refresh() { show(view); }
+window.go = (v, f) => { if (f) oFilter = f; location.hash = v; };
+document.querySelectorAll('.aside a[data-v]').forEach(a => a.onclick = () => { location.hash = a.dataset.v; });
+addEventListener('hashchange', () => { const v = location.hash.slice(1); if (VIEWS[v]) show(v); });
+$('gsearch').oninput = e => { oQuery = e.target.value.trim().toLowerCase(); if (oQuery && view !== 'orders') { location.hash = 'orders'; } else if (view === 'orders') vOrders(); };
+const h0 = location.hash.slice(1); show(VIEWS[h0] ? h0 : 'dash');
+// 与用户端共用的演示浮条
+(function () { const d = document.createElement('div'); d.className = 'demo-dock'; d.innerHTML = `<em>原型演示</em><a href="index.html">前台</a><a href="${S.user ? 'account.html' : 'auth.html'}">用户后台</a><button id="dr">重置数据</button>`; document.body.appendChild(d); d.querySelector('#dr').onclick = () => { NYD.reset(); location.reload(); }; })();
+</script>
+</body>
+</html>

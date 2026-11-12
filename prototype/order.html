@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>确认订单 · 南洋桌面</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="wrap page">
+  <h1 class="page-title">确认订单</h1>
+  <p class="muted">核对套餐，留下联系方式，提交后到闲鱼付款。</p>
+  <div class="flow">
+    <div class="s on"><b>1</b><span>确认订单</span></div><div class="bar"></div>
+    <div class="s"><b>2</b><span>闲鱼付款</span></div><div class="bar"></div>
+    <div class="s"><b>3</b><span>等待开通</span></div><div class="bar"></div>
+    <div class="s"><b>4</b><span>连接使用</span></div>
+  </div>
+
+  <div class="two">
+    <div>
+      <div class="panel">
+        <h3><span class="n">1</span>你的套餐</h3>
+        <div class="prod" style="display:flex;gap:18px;align-items:center">
+          <div class="dev-ic" style="width:72px;height:72px"><i></i></div>
+          <div style="flex:1"><b style="font-size:18px">Mac mini M4 · 马来西亚机房</b><div class="muted" style="font-size:14px">16GB 内存 · 256GB 存储 · 独立 IP 宽带（已包含）</div></div>
+          <a class="link" style="font-size:14px" href="index.html#pricing">修改</a>
+        </div>
+        <dl class="kv" style="margin-top:22px;padding-top:20px;border-top:1px solid var(--line)">
+          <dt>租期</dt><dd id="o-term"></dd>
+          <dt>台数</dt><dd id="o-qty"></dd>
+          <dt>计费方式</dt><dd id="o-calc"></dd>
+          <dt>起租时间</dt><dd>从<b>开通当天</b>开始计算，不从付款日算</dd>
+        </dl>
+      </div>
+
+      <div class="panel">
+        <h3><span class="n">2</span>联系方式</h3>
+        <p class="muted" style="font-size:14px;margin:-6px 0 18px">开通后我们会通过站内信、邮件和下面的联系方式通知你。微信和 Telegram 至少填一个。</p>
+        <div class="row2">
+          <div class="field"><label>微信号</label><input class="input" id="wechat" placeholder="例如 nanyang_user"></div>
+          <div class="field"><label>Telegram</label><input class="input" id="telegram" placeholder="@username"></div>
+        </div>
+        <div class="field" style="margin:0"><div class="errmsg" id="cerr">请至少填写一个联系方式</div></div>
+        <label class="check" style="margin-top:6px"><input type="checkbox" id="agree"><span>我已阅读并同意<a class="link" href="#">服务条款</a>、<a class="link" href="refund.html" target="_blank">退款政策</a>和<a class="link" href="#">可接受使用政策</a></span></label>
+      </div>
+    </div>
+
+    <aside class="summary" style="top:84px">
+      <h3>订单金额</h3><div class="sub" id="o-sub"></div>
+      <div class="line-item"><span>机器</span><b id="o-machine"></b></div>
+      <div class="line-item"><span>宽带</span><b class="inc">已包含</b></div>
+      <div class="line-item"><span>付款方式</span><b>闲鱼担保交易</b></div>
+      <div class="total"><span>应付总额</span><strong><small>¥</small><span id="o-total"></span></strong></div>
+      <div class="saved" id="o-save"></div>
+      <div class="perk" id="o-perk"></div>
+      <button class="btn btn-primary btn-lg btn-block" id="submit">提交订单，去闲鱼付款</button>
+      <p class="fine">提交后订单保留 48 小时，超时未付款将自动取消</p>
+    </aside>
+  </div>
+</main>
+<footer id="site-footer"></footer>
+<script src="assets/app.js"></script>
+<script>
+NYD.init('');
+if (!NYD.requireLogin()) throw 0;
+const sel = JSON.parse(sessionStorage.getItem('nyd_sel') || 'null') || { plan: 'm12', qty: 1 };
+const p = NYD.plan(sel.plan), pr = NYD.price(sel.plan, sel.qty), $ = id => document.getElementById(id);
+$('o-term').textContent = `${p.name} · ${p.months} 个月`;
+$('o-qty').textContent = sel.qty + ' 台';
+$('o-calc').textContent = `¥${p.monthly} / 月 × ${p.months} 个月 × ${sel.qty} 台`;
+$('o-machine').textContent = `¥${p.monthly} × ${p.months} × ${sel.qty}`;
+$('o-total').textContent = pr.total.toLocaleString('zh-CN');
+$('o-sub').textContent = `${p.name} · ${sel.qty} 台`;
+$('o-save').textContent = pr.save > 0 ? `比月付共省 ${NYD.money(pr.save)}` : '';
+$('o-perk').className = 'perk' + (p.support ? '' : ' off');
+$('o-perk').textContent = p.support ? '★ 含 1 对 1 专属客服' : '半年付、年付可享 1 对 1 专属客服';
+const u = NYD.S.user; $('wechat').value = u.wechat || ''; $('telegram').value = u.telegram || '';
+$('submit').onclick = () => {
+  const w = $('wechat').value.trim(), t = $('telegram').value.trim();
+  $('cerr').parentElement.classList.toggle('bad', !w && !t);
+  if (!w && !t) { $('wechat').classList.add('err'); $('wechat').focus(); return; }
+  if (!$('agree').checked) return NYD.toast('请先勾选同意相关条款');
+  u.wechat = w; u.telegram = t;
+  const o = NYD.createOrder({ plan: sel.plan, qty: sel.qty, contact: { wechat: w, telegram: t } });
+  $('submit').disabled = true; $('submit').textContent = '订单已创建，正在跳转…';
+  setTimeout(() => location.href = 'pay.html?no=' + o.no, 500);
+};
+</script>
+</body>
+</html>

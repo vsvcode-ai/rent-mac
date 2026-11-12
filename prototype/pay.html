@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>订单详情 · 南洋桌面</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="wrap page" id="root"></main>
+<footer id="site-footer"></footer>
+
+<div class="modal-bg" id="modal-cancel"><div class="modal"><button class="x" onclick="NYD.closeModal('cancel')">✕</button>
+  <h3>取消订单？</h3><p class="muted" style="font-size:14.5px;margin:6px 0 24px">取消后订单作废。如果你已经在闲鱼付款，请不要取消，先联系客服处理。</p>
+  <div style="display:flex;gap:10px"><button class="btn btn-line btn-block" onclick="NYD.closeModal('cancel')">再想想</button><button class="btn btn-danger btn-block" id="do-cancel">确认取消</button></div></div></div>
+
+<script src="assets/app.js"></script>
+<script>
+NYD.init('');
+if (!NYD.requireLogin()) throw 0;
+const no = new URLSearchParams(location.search).get('no');
+const o = NYD.getOrder(no);
+const root = document.getElementById('root');
+if (!o || o.email !== NYD.S.user.email) {
+  root.innerHTML = `<div class="empty"><b>找不到这个订单</b><a class="btn btn-dark" href="account.html#orders" style="margin-top:14px">返回我的订单</a></div>`;
+} else render();
+
+function flow(o) {
+  const idx = { pending: 1, failed: 1, cancelled: 1, verifying: 2, queued: 2, active: 3, done: 3, refund: 3 }[o.status];
+  const names = ['确认订单', '闲鱼付款', '等待开通', '连接使用'];
+  return '<div class="flow">' + names.map((n, i) => `<div class="s ${i < idx ? 'done' : i === idx ? 'on' : ''}"><b>${i < idx ? '✓' : i + 1}</b><span>${n}</span></div>${i < 3 ? `<div class="bar ${i < idx ? 'done' : ''}"></div>` : ''}`).join('') + '</div>';
+}
+function tl(o) {
+  const st = o.status, t = (cond, cur) => cond ? 'done' : cur ? 'cur' : 'todo';
+  const paid = ['verifying', 'queued', 'active', 'done'].includes(st), ver = ['queued', 'active', 'done'].includes(st), act = ['active', 'done'].includes(st);
+  return `<ul class="timeline">
+    <li class="done"><i></i><b>订单已创建</b><small>${NYD.fmtTime(o.createdAt)}</small></li>
+    <li class="${t(paid, st === 'pending')}"><i></i><b>已在闲鱼付款</b><small>${paid ? '闲鱼订单号 ' + o.xyNo : '等待你付款并回填闲鱼订单号'}</small></li>
+    <li class="${t(ver, st === 'verifying')}"><i></i><b>客服核对收款</b><small>${ver ? '已确认收款 · ' + NYD.fmtTime(o.verifiedAt || o.paidAt) : st === 'verifying' ? '核对中，通常 24 小时内' : '付款后进行'}</small></li>
+    <li class="${t(act, st === 'queued')}"><i></i><b>运维开通机器</b><small>${act ? '已开通 · ' + NYD.fmtTime(o.activatedAt) : '确认收款后 7 天内完成'}</small></li>
+    <li class="${act ? 'cur' : 'todo'}"><i></i><b>连接使用</b><small>${act ? '到「我的设备」查看连接信息' : '开通后获得 UU 远程连接信息'}</small></li></ul>`;
+}
+function summary(o) {
+  const p = NYD.plan(o.plan), pr = NYD.price(o.plan, o.qty);
+  return `<div class="panel"><h3>订单信息 <span style="margin-left:auto">${NYD.pill(o.status)}</span></h3>
+    <dl class="kv"><dt>订单号</dt><dd class="mono">${o.no}</dd><dt>类型</dt><dd>${o.kind === 'renew' ? '续费订单' : '新租订单'}</dd>
+    <dt>套餐</dt><dd>Mac mini M4 · ${p.name} · ${o.qty} 台</dd><dt>金额</dt><dd><b style="font-size:18px">${NYD.money(pr.total)}</b></dd>
+    <dt>联系方式</dt><dd>${[o.contact.wechat && '微信 ' + o.contact.wechat, o.contact.telegram && 'Telegram ' + o.contact.telegram].filter(Boolean).join(' · ') || '—'}</dd>
+    <dt>创建时间</dt><dd>${NYD.fmtTime(o.createdAt)}</dd>${o.xyNo ? `<dt>闲鱼订单号</dt><dd class="mono">${o.xyNo}</dd>` : ''}</dl></div>`;
+}
+function render() {
+  let main = '', side = '';
+  const p = NYD.plan(o.plan), pr = NYD.price(o.plan, o.qty);
+  if (o.status === 'pending') {
+    const left = o.createdAt + 48 * NYD.HOUR - Date.now();
+    main = `
+    <div class="alert warn"><span>!</span><div><b>请在 ${Math.max(1, Math.round(left / NYD.HOUR))} 小时内完成付款</b>，超时订单将自动取消。付款时务必在闲鱼留言填写下方订单号，否则客服无法匹配。</div></div>
+    <div class="panel"><h3><span class="n">1</span>先复制你的订单号</h3>
+      <div class="copybox"><code>${o.no}</code><button class="btn btn-dark btn-sm" onclick="NYD.copy('${o.no}','订单号已复制')">复制</button></div></div>
+    <div class="panel"><h3><span class="n">2</span>去闲鱼付款</h3>
+      <div class="pay-hero"><div class="qr">${NYD.qrSvg('xy-' + o.plan)}</div>
+        <div><b style="font-size:17px">闲鱼商品 · Mac mini 租赁（${p.name}）</b>
+          <div class="muted" style="margin:6px 0 14px;font-size:14px">手机扫码，或点击下方按钮打开闲鱼</div>
+          <ol class="how"><li>拍下商品，<b>拍下数量 = ${o.qty}</b></li><li>应付金额 <b>${NYD.money(pr.total)}</b>（单价 ${NYD.money(p.monthly * p.months)} × ${o.qty}）</li><li>在闲鱼<b>留言中粘贴订单号</b>并付款</li></ol>
+          <a class="btn btn-primary" style="margin-top:18px" href="#" onclick="return NYD.toast('原型：这里会跳转到对应租期的闲鱼商品')">打开闲鱼付款 ↗</a></div></div></div>
+    <div class="panel"><h3><span class="n">3</span>付完回来，填写闲鱼订单号</h3>
+      <div class="row2"><div class="field"><label>闲鱼订单号</label><input class="input mono" id="xyno" placeholder="闲鱼「我买到的」里的订单号" inputmode="numeric"><div class="errmsg">请输入闲鱼订单号（10 位以上数字）</div></div>
+      <div class="field"><label>闲鱼昵称<small>选填</small></label><input class="input" id="xynick" placeholder="方便客服核对"></div></div>
+      <button class="btn btn-primary btn-lg" id="submit-xy">我已付款，提交核对</button></div>`;
+    side = `${tl(o)}<button class="btn btn-line btn-sm" style="margin-top:6px" onclick="NYD.modal('cancel')">取消订单</button>`;
+  } else if (o.status === 'verifying') {
+    main = `<div class="alert info"><span>i</span><div><b>客服正在核对你的付款</b>。我们会在闲鱼后台确认金额和数量，通常 24 小时内完成，确认后你会收到通知。</div></div>
+      <div class="panel"><h3>你提交的付款信息</h3><dl class="kv"><dt>闲鱼订单号</dt><dd class="mono">${o.xyNo}</dd><dt>闲鱼昵称</dt><dd>${o.xyNick || '—'}</dd><dt>提交时间</dt><dd>${NYD.fmtTime(o.paidAt)}</dd></dl>
+      <p class="muted" style="font-size:13.5px;margin-top:16px">填错了？<a class="link" href="#" onclick="NYD.modal('support');return false">联系客服</a>修改。</p></div>`;
+    side = tl(o);
+  } else if (o.status === 'queued') {
+    const left = NYD.deadline(o) - Date.now(), d = Math.max(0, Math.floor(left / NYD.DAY)), h = Math.max(0, Math.floor(left % NYD.DAY / NYD.HOUR));
+    main = `<div class="alert ok"><span>✓</span><div><b>已确认收款，正在排队开通</b>。机器开通后，租期才开始计算。</div></div>
+      <div class="panel"><h3>开通时限</h3><p class="muted" style="font-size:14.5px;margin-bottom:16px">自确认收款起 7 天内完成开通，通常会更快。</p>
+        <div class="countdown"><div><b>${d}</b><span>天</span></div><div><b>${h}</b><span>小时</span></div></div>
+        <p class="muted" style="font-size:13px;margin-top:16px">截止 ${NYD.fmtTime(NYD.deadline(o))} · 超期未开通可选择全额退款或每超 1 天补 1 天租期（<a class="link" href="refund.html">退款政策</a>）</p></div>
+      <div class="panel"><h3>等待期间可以做什么</h3><ol class="how"><li>阅读 <a class="link" href="help.html">UU 远程连接教程</a>，提前在电脑和手机上装好 UU 远程</li><li>确认联系方式正确，开通后我们会第一时间通知你</li></ol></div>`;
+    side = tl(o);
+  } else if (['active', 'done'].includes(o.status)) {
+    main = `<div class="alert ok"><span>✓</span><div><b>${o.kind === 'renew' ? '续费成功，到期时间已延长' : '机器已开通'}</b>。到「我的设备」查看 UU 远程连接信息。</div></div>
+      <div class="panel" style="text-align:center;padding:44px"><div class="dev-ic" style="margin:0 auto 18px"><i></i></div><h3 style="justify-content:center">${o.devices.length ? o.devices.map(d => d.code).join('、') : '已续费'}</h3><p class="muted" style="margin-bottom:22px">租期至 ${o.endAt ? NYD.fmtDate(o.endAt) : '—'}</p><a class="btn btn-primary btn-lg" href="account.html#devices">查看连接信息</a></div>`;
+    side = tl(o);
+  } else {
+    main = `<div class="alert danger"><span>!</span><div><b>${NYD.STATUS[o.status].t}</b>。${o.status === 'failed' ? '金额或数量与订单不符，客服会联系你处理。' : '该订单已结束。'}</div></div>`;
+    side = tl(o);
+  }
+  root.innerHTML = `<a class="link" style="font-size:14px" href="account.html#orders">← 我的订单</a>
+    <h1 class="page-title" style="margin-top:14px">${o.status === 'pending' ? '去闲鱼付款' : '订单详情'}</h1>${flow(o)}
+    <div class="two"><div>${main}</div><div>${summary(o)}<div class="panel"><h3>订单进度</h3>${side}</div></div></div>`;
+  const sx = document.getElementById('submit-xy');
+  if (sx) sx.onclick = () => {
+    const v = document.getElementById('xyno').value.replace(/\s/g, '');
+    const f = document.getElementById('xyno').closest('.field'), bad = !/^\d{10,}$/.test(v);
+    f.classList.toggle('bad', bad); document.getElementById('xyno').classList.toggle('err', bad);
+    if (bad) return;
+    NYD.setStatus(o.no, 'verifying', { xyNo: v, xyNick: document.getElementById('xynick').value.trim(), paidAt: Date.now() });
+    NYD.toast('已提交，客服核对中'); setTimeout(() => location.reload(), 600);
+  };
+}
+document.getElementById('do-cancel').onclick = () => { NYD.setStatus(o.no, 'cancelled'); NYD.closeModal('cancel'); NYD.toast('订单已取消'); setTimeout(() => location.href = 'account.html#orders', 600); };
+document.getElementById('modal-cancel').addEventListener('click', e => { if (e.target.id === 'modal-cancel') NYD.closeModal('cancel'); });
+</script>
+</body>
+</html>

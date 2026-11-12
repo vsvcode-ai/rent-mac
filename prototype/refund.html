@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>退款政策 · 南洋桌面</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="wrap page" style="max-width:860px">
+  <div class="kicker">政策</div>
+  <h1 class="page-title" style="font-size:40px">退款政策</h1>
+  <p class="muted" style="font-size:17px;margin:8px 0 30px">我们希望退款这件事清楚、公平。所有退款都通过闲鱼退款流程办理。</p>
+
+  <table class="cmp policy"><thead><tr><th>情况</th><th>处理方式</th></tr></thead><tbody>
+    <tr><td>付款后、开通前</td><td>全额退款。</td></tr>
+    <tr><td>超过 7 天未开通</td><td>你可以选择<b>全额退款</b>，或继续等待并获得补偿：每超 1 天，租期补 1 天。</td></tr>
+    <tr><td>开通后 48 小时内，机器或网络无法正常使用且无法修复</td><td>全额退款。</td></tr>
+    <tr><td>租期内机器故障停机超过 24 小时</td><td>按停机天数补偿租期。</td></tr>
+    <tr><td>开通 48 小时后主动退租</td><td>已使用时长按<b>月付价 ¥799 / 月</b>重新计算（不足一个月按一个月），退还差额。月付订单不退。</td></tr>
+    <tr><td>违反可接受使用政策被停机</td><td>不退款。</td></tr>
+  </tbody></table>
+
+  <div class="calc">
+    <h3 class="serif" style="font-size:22px">退款金额计算器</h3>
+    <p class="muted" style="font-size:14px;margin:6px 0 20px">适用于「开通 48 小时后主动退租」的情况。</p>
+    <div class="row2">
+      <div class="field"><label>你购买的租期</label><select class="input" id="c-plan"></select></div>
+      <div class="field"><label>台数</label><select class="input" id="c-qty"></select></div>
+    </div>
+    <div class="field"><label>已使用 <b id="c-used-t">3 个月</b><small>（不足一个月按一个月计）</small></label><input type="range" class="range" id="c-used" min="1" max="12" value="3"></div>
+    <div class="calc-out">
+      <div><div class="muted" style="font-size:13px">已付 <b id="c-paid"></b> − 已用 <b id="c-cost"></b></div><div class="muted" style="font-size:13px;margin-top:2px" id="c-note"></div></div>
+      <div style="text-align:right"><div class="muted" style="font-size:13px">预计退款</div><b id="c-refund"></b></div>
+    </div>
+  </div>
+
+  <h3 style="margin:36px 0 12px">补充说明</h3>
+  <ul style="padding-left:20px;color:var(--ink2);display:grid;gap:8px;font-size:15px">
+    <li>租期从<b style="color:var(--ink)">开通当天</b>开始计算，不从付款日算。</li>
+    <li>退款申请请在「我的账户 → 工单」提交，或联系客服；我们会在 3 个工作日内处理。</li>
+    <li>退款金额按闲鱼实际支付金额为准，平台扣费规则以闲鱼为准。</li>
+    <li>退租后机器会被回收并抹盘重装，请提前备份数据。</li>
+  </ul>
+</main>
+<footer id="site-footer"></footer>
+<script src="assets/app.js"></script>
+<script>
+NYD.init('');
+const $ = id => document.getElementById(id);
+$('c-plan').innerHTML = NYD.PLANS.filter(p => p.months > 1).map(p => `<option value="${p.id}" ${p.id === 'm12' ? 'selected' : ''}>${p.name}（${NYD.money(p.monthly * p.months)} / 台）</option>`).join('');
+$('c-qty').innerHTML = Array.from({ length: 10 }, (_, i) => `<option>${i + 1}</option>`).join('');
+function calc() {
+  const p = NYD.plan($('c-plan').value), q = +$('c-qty').value;
+  $('c-used').max = p.months; if (+$('c-used').value > p.months) $('c-used').value = p.months;
+  const used = +$('c-used').value; $('c-used-t').textContent = used + ' 个月';
+  const paid = p.monthly * p.months * q, cost = Math.min(paid, 799 * used * q), refund = Math.max(0, paid - cost);
+  $('c-paid').textContent = NYD.money(paid); $('c-cost').textContent = `¥799 × ${used} × ${q} = ${NYD.money(799 * used * q)}`;
+  $('c-refund').textContent = NYD.money(refund);
+  $('c-note').textContent = refund === 0 ? '已使用整个租期，无可退金额' : `示例：${p.name}用了 ${used} 个月`;
+}
+['c-plan', 'c-qty', 'c-used'].forEach(i => $(i).oninput = calc); calc();
+</script>
+</body>
+</html>

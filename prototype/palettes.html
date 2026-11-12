@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>配色方案 v2 · 南洋桌面</title>
+<style>
+:root{--sans:"Inter","SF Pro Display",-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;--mono:"JetBrains Mono","SF Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:#0a0a0a;color:#ededea;-webkit-font-smoothing:antialiased;padding:64px 0 120px}
+.wrap{max-width:1360px;margin:0 auto;padding:0 32px}
+.intro{display:grid;grid-template-columns:1.1fr 1fr;gap:64px;align-items:end;margin-bottom:64px}
+.intro small{font-family:var(--mono);font-size:12px;color:#7d7b75;letter-spacing:.08em}
+.intro h1{font-size:44px;font-weight:600;letter-spacing:-.03em;line-height:1.08;margin-top:14px}
+.intro p{color:#9a978f;font-size:15px;line-height:1.75}
+.find{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #262522;border-bottom:1px solid #262522;margin-bottom:72px}
+.find div{padding:22px 22px 24px 0}.find div+div{padding-left:22px;border-left:1px solid #262522}
+.find b{display:block;font-size:30px;font-weight:600;letter-spacing:-.03em}
+.find span{font-size:13px;color:#9a978f;line-height:1.6;display:block;margin-top:6px}
+.find .chips{display:flex;gap:4px;margin-top:12px;flex-wrap:wrap}.find .chips i{width:18px;height:18px;border-radius:3px}
+
+.pal{display:grid;grid-template-columns:1.35fr 1fr;border:1px solid #262522;border-radius:20px;overflow:hidden;margin-bottom:28px;background:#111110}
+/* ---- 迷你首屏 ---- */
+.mock{position:relative;background:var(--c);color:var(--ink);padding:26px 34px 0;min-height:600px;overflow:hidden;isolation:isolate}
+.mock::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:var(--grain,.06);mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");z-index:5}
+.mock .glow{position:absolute;width:520px;height:520px;right:-140px;top:-180px;border-radius:50%;background:radial-gradient(circle,var(--glow) 0%,transparent 62%);z-index:-1}
+.m-nav{display:flex;align-items:center;gap:22px;font-size:12px;color:var(--mu)}
+.m-nav b{color:var(--ink);font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;margin-right:10px}
+.m-nav b i{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--ink);position:relative}
+.m-nav b i::after{content:"";position:absolute;right:2px;top:4px;width:3px;height:3px;border-radius:50%;background:var(--sig)}
+.m-nav .r{margin-left:auto;display:flex;gap:6px}
+.m-btn{height:28px;padding:0 11px;border-radius:6px;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.m-btn.p{background:var(--sig);color:var(--on)}
+.m-btn.s{border:1px solid var(--ln);color:var(--ink)}
+.m-btn.lg{height:38px;padding:0 16px;font-size:13px;border-radius:8px}
+.m-eb{display:inline-flex;align-items:center;gap:8px;margin-top:52px;font-size:11.5px;color:var(--mu);font-family:var(--mono);letter-spacing:.04em}
+.m-eb::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--sig)}
+.m-h{font-size:58px;font-weight:600;letter-spacing:-.035em;line-height:1.02;margin-top:16px}
+.m-h em{font-style:normal;color:var(--sigText)}
+.m-h .o{color:var(--mu)}
+.m-p{font-size:13.5px;color:var(--mu);max-width:25em;margin-top:16px;line-height:1.65}
+.m-cta{display:flex;gap:8px;margin-top:22px}
+.m-band{position:absolute;left:0;right:0;bottom:0;height:150px;background:var(--band);color:var(--bandInk);display:grid;grid-template-columns:auto 1fr auto;align-items:end;padding:0 34px 22px;gap:28px}
+.m-band .big{font-size:96px;font-weight:600;letter-spacing:-.05em;line-height:.8}
+.m-band .big small{font-size:20px;letter-spacing:-.01em;margin-left:6px;opacity:.75}
+.m-band .txt{font-size:12px;line-height:1.6;opacity:.8;max-width:22em;padding-bottom:4px}
+.m-band .tk{font-family:var(--mono);font-size:11px;opacity:.75;text-align:right;padding-bottom:4px}
+.m-panel{position:absolute;right:34px;bottom:172px;width:252px;border:1px solid var(--ln);background:var(--s1);border-radius:12px;padding:14px;font-size:11.5px;color:var(--mu);box-shadow:0 30px 60px -30px rgba(0,0,0,.5)}
+.m-panel .hd{display:flex;align-items:center;gap:8px;color:var(--ink);font-weight:600;margin-bottom:10px}
+.m-panel .hd .lv{margin-left:auto;font-weight:500;color:var(--mu);display:flex;align-items:center;gap:5px}.m-panel .hd .lv::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.m-panel .rw{display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--ln)}
+.m-panel .rw b{color:var(--ink);font-weight:500}
+.m-panel .bar{height:3px;border-radius:3px;background:var(--ln);margin-top:8px;overflow:hidden}.m-panel .bar i{display:block;height:100%;width:72%;background:var(--sig)}
+.m-panel .pl{display:flex;gap:5px;margin-top:10px;flex-wrap:wrap}
+.m-pill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;padding:1px 7px;border-radius:999px;border:1px solid var(--ln);color:var(--ink)}
+.m-pill::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--d)}
+/* ---- 规格 ---- */
+.spec{padding:30px 32px;display:flex;flex-direction:column;gap:22px;border-left:1px solid #262522}
+.spec .t{display:flex;align-items:baseline;gap:10px}
+.spec .t h2{font-size:28px;font-weight:600;letter-spacing:-.02em}
+.spec .t small{font-family:var(--mono);font-size:12px;color:#7d7b75}
+.spec .t .rec{margin-left:auto;font-size:11.5px;font-weight:600;background:#ededea;color:#0a0a0a;padding:3px 9px;border-radius:5px}
+.spec .story{font-size:14px;color:#a9a69e;line-height:1.75}
+.spec .ref{font-size:12px;color:#7d7b75;line-height:1.7}.spec .ref b{color:#c9c6be;font-weight:500}
+.sw{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid #262522;border-radius:10px;overflow:hidden}
+.sw div{height:74px;padding:8px;display:flex;flex-direction:column;justify-content:flex-end;font-size:10.5px;font-family:var(--mono);line-height:1.35}
+.sw div span{opacity:.7;font-family:var(--sans);font-size:10.5px}
+.ratio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px}
+.ratio div{border:1px solid #262522;border-radius:8px;padding:8px 10px;color:#9a978f}.ratio b{display:block;color:#ededea;font-size:15px;font-weight:600;font-family:var(--mono)}
+.rules{list-style:none;display:grid;gap:0;border-top:1px solid #262522}
+.rules li{display:grid;grid-template-columns:62px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #262522;font-size:13px;color:#c9c6be;line-height:1.6}
+.rules li em{font-style:normal;font-family:var(--mono);font-size:11px;color:#7d7b75;padding-top:2px}
+.fit{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12.5px;line-height:1.65;color:#a9a69e}
+.fit div{border:1px solid #262522;border-radius:8px;padding:10px 12px}.fit b{display:block;color:#ededea;font-weight:600;margin-bottom:2px;font-size:12px}
+.foot{margin-top:56px;color:#7d7b75;font-size:12.5px;line-height:1.8;border-top:1px solid #262522;padding-top:24px}
+@media(max-width:1100px){.pal,.intro{grid-template-columns:1fr}.spec{border-left:0;border-top:1px solid #262522}.find{grid-template-columns:1fr 1fr}.m-panel{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <div><small>COLOR SYSTEM · V2 · 以 AWWWARDS / FWA / WEBBY 获奖作品为基准</small><h1>四套配色方案，<br>按获奖作品的用色规律来定。</h1></div>
+    <p>我抓取了 Awwwards 近期 39 个获奖作品（每日最佳与荣誉提名）官方标注的配色，归纳出四条规律，再按这些规律给南洋桌面做了四套完整的配色系统。左侧是迷你首屏效果，右侧是色值、对比度和使用规则。</p>
+  </div>
+  <div class="find">
+    <div><b>2 色</b><span>绝大多数获奖作品只用 2 种颜色，最多 3 种。约三分之一是纯黑白。</span></div>
+    <div><b>带色调的中性色</b><span>不用纯灰。暖黑配纸白，或冷墨配雾白。</span><div class="chips"><i style="background:#14140F"></i><i style="background:#F4F3EF"></i><i style="background:#2C2922"></i><i style="background:#13151f"></i><i style="background:#e9ecee"></i></div></div>
+    <div><b>10 / 39 用朱红</b><span>标志色最常见的是朱红、橙红，其次是电光蓝和深林绿。紫色几乎没有。</span><div class="chips"><i style="background:#F15534"></i><i style="background:#FC4F00"></i><i style="background:#FF4949"></i><i style="background:#ED362A"></i><i style="background:#E94E1B"></i><i style="background:#0047FF"></i><i style="background:#2E3A26"></i></div></div>
+    <div><b>大胆用在大面积上</b><span>标志色会铺成整块色带、超大数字，而不只是点缀在按钮上。每页只出现一次大面积。</span></div>
+  </div>
+  <div id="pals"></div>
+  <div class="foot">数据来源：awwwards.com 每日最佳与暗色网站分类下 39 个作品页的官方「Colors」标注，抓取于 2026-11-12。对比度按 WCAG 2.1 计算。品牌、文案和界面均为南洋桌面自有内容。</div>
+</div>
+<script>
+function L(h){h=h.replace('#','');const c=[0,2,4].map(i=>parseInt(h.substr(i,2),16)/255).map(v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4));return .2126*c[0]+.7152*c[1]+.0722*c[2]}
+const cr=(a,b)=>{const x=L(a),y=L(b);return ((Math.max(x,y)+.05)/(Math.min(x,y)+.05)).toFixed(1)};
+const P=[
+ {k:'01',name:'赤道',en:'Equator',rec:true,
+  t:{c:'#0e0d0b',s1:'#171512',ln:'#2a2621',ink:'#f3efe6',mu:'#9a948a',sig:'#ff4d1f',sigText:'#ff6a3d',on:'#120600',band:'#ff4d1f',bandInk:'#120600',glow:'rgba(255,77,31,.16)',grain:.07,ok:'#5cc98a',warn:'#f5c451',danger:'#ff6f91',info:'#8fb4ff'},
+  story:'暖黑底配纸白文字，标志色用朱红。像赤道正午的太阳，也是中文语境里吉利、醒目的颜色。和两家竞品的蓝色系完全拉开。',
+  ref:'参考获奖作品：<b>ZIRKA Interceptor</b> #FC4F00/#000，<b>Heron AI</b> #F15534/#282828，<b>Don’t Look Up</b> #F4F3EF/#14140F 的暖中性色。',
+  rules:[['85%','暖黑底和纸白文字承担几乎所有界面'],['12%','暖灰（#9a948a）用于次要文字与细线'],['3%','朱红只用于主按钮、选中态、价格数字，以及每页一处整块色带'],['状态','「失败」改用粉红 #ff6f91，避免和朱红撞色']],
+  fit:['与「南洋 / 热带 / 正午」直接呼应，辨识度最高；获奖作品中最常见的标志色','朱红面积一旦超过 5% 会显得吵，需要严格控制']},
+ {k:'02',name:'椰林',en:'Palm',
+  t:{c:'#f1eee4',s1:'#fbf9f2',ln:'#d9d4c4',ink:'#15190f',mu:'#5f6455',sig:'#1f3a2b',sigText:'#1f3a2b',on:'#f1eee4',band:'#1f3a2b',bandInk:'#c6f24a',glow:'rgba(198,242,74,.35)',grain:.10,ok:'#2f8f4e',warn:'#c27a12',danger:'#c8372d',info:'#2c6fb5'},
+  story:'唯一的浅色方案。米白纸感底色配深椰林绿，色带上用一抹酸性青柠色做高光。是编辑杂志式的气质，像高端旅行品牌，不像机房。',
+  ref:'参考获奖作品：<b>Belgrade Arbor</b> #F4F0DB/#2E3A26，<b>Brandon Yasin</b> #505B44/#2C2922；青柠高光是近两年获奖作品的流行色。',
+  rules:[['80%','米白纸底，大量留白'],['15%','深椰林绿作为文字强调色、按钮和大色块'],['5%','青柠 #c6f24a 只出现在深绿色块上，作高光'],['注意','要打破 Linear「只做暗色」的规则，整套系统改为浅色']],
+  fit:['最有温度、最不像“技术产品”，能吸引非开发者用户（外贸、设计师）','和第一版被否的浅色风格方向接近，需要靠排版质感拉开差距']},
+ {k:'03',name:'深海',en:'Abyss',
+  t:{c:'#090c13',s1:'#111623',ln:'#1f2638',ink:'#e8ebf0',mu:'#8a92a3',sig:'#2f5bff',sigText:'#7b95ff',on:'#ffffff',band:'#2f5bff',bandInk:'#ffffff',glow:'rgba(47,91,255,.28)',grain:.06,ok:'#3ccf8e',warn:'#f2b24a',danger:'#ff5c6a',info:'#38c6e8'},
+  story:'冷墨蓝黑底，标志色是饱和的电光钴蓝，比普通科技蓝更亮、更“电”。像深夜的海峡，最贴近技术基础设施的气质。',
+  ref:'参考获奖作品：<b>Dark Frontiers</b> #131423/#0047FF，<b>Overworld Audio</b> #13151f/#e9ecee，<b>DeepBook</b> #1E6EF3。',
+  rules:[['85%','冷墨底，中性色都带一点蓝'],['12%','雾灰蓝 #8a92a3 作次要文字'],['3%','钴蓝作按钮、色块；作文字时换亮一档 #7b95ff 保证可读'],['状态','「信息」改用青色 #38c6e8，与钴蓝区分']],
+  fit:['可信、专业，最不容易出错','蓝色是行业通用色，辨识度不如赤道']},
+ {k:'04',name:'墨白',en:'Ink',
+  t:{c:'#0b0b0a',s1:'#151514',ln:'#2a2a27',ink:'#f2f1ec',mu:'#8e8c85',sig:'#f2f1ec',sigText:'#f2f1ec',on:'#0b0b0a',band:'#f2f1ec',bandInk:'#0b0b0a',glow:'rgba(215,255,58,.10)',grain:.08,ok:'#d7ff3a',warn:'#ffb547',danger:'#ff5a4e',info:'#a8a7a0',sig2:'#d7ff3a'},
+  story:'几乎纯黑白，只靠字号、字重和留白建立层级。唯一的彩色是一个荧光黄绿信号色，只用在「在线」「可租」这类状态点上。',
+  ref:'参考获奖作品：约三分之一获奖作品是纯黑白，例如 <b>Spyker Cars</b>、<b>Cartier</b>、<b>FORMAT</b>、<b>Grids</b>。',
+  rules:[['90%','墨黑与骨白，主按钮用反色（白底黑字）'],['9%','暖灰作次要文字'],['1%','荧光黄绿 #d7ff3a 只用于状态点，绝不做按钮或大色块'],['注意','排版必须足够强，否则会显得空、显得像没做完']],
+  fit:['最克制、最有高级感，最接近奢侈品和顶级工作室的获奖作品','对排版、动效和图片的要求最高；促销信息不够醒目']},
+];
+document.getElementById('pals').innerHTML=P.map(p=>{const t=p.t;const v=Object.entries(t).map(([k,x])=>`--${k}:${x}`).join(';');
+ const sw=[['底色',t.c],['表面',t.s1],['细线',t.ln],['文字',t.ink],['次要',t.mu],[p.k==='04'?'信号':'标志',p.k==='04'?t.sig2:t.sig]];
+ return `<section class="pal">
+  <div class="mock" style="${v}"><div class="glow"></div>
+   <div class="m-nav"><b><i></i>南洋桌面</b><span>产品</span><span>场景</span><span>价格</span><span>帮助</span><span class="r"><span class="m-btn s">登录</span><span class="m-btn p">立即租用</span></span></div>
+   <div class="m-eb">KUALA LUMPUR · 121 台现货</div>
+   <div class="m-h">一台独享的 Mac mini，<br><span class="o">放在</span><em>南洋</em><span class="o">。</span></div>
+   <div class="m-p">实体机独享，配独立固定 IP。用 UU 远程从电脑或手机连接，租期内环境一直在。</div>
+   <div class="m-cta"><span class="m-btn p lg">选择套餐 →</span><span class="m-btn s lg">查看连接方式</span></div>
+   <div class="m-panel"><div class="hd">NYD-MY-0042<span class="lv">已连接</span></div>
+     <div class="rw"><span>固定 IP</span><b>103.17.46.49</b></div><div class="rw"><span>到期</span><b>2027-10-05</b></div>
+     <div class="bar"><i></i></div>
+     <div class="pl"><span class="m-pill" style="--d:${t.ok}">使用中</span><span class="m-pill" style="--d:${t.warn}">待付款</span><span class="m-pill" style="--d:${t.info}">待核对</span><span class="m-pill" style="--d:${t.danger}">失败</span></div></div>
+   <div class="m-band"><div class="big">¥499<small>/ 月</small></div><div class="txt">年付每月，独立 IP 宽带已包含。比月付一年省 ¥3,600。</div><div class="tk">M4 · 16GB · 256GB</div></div>
+  </div>
+  <div class="spec">
+   <div class="t"><small>${p.k}</small><h2>${p.name}</h2><small>${p.en}</small>${p.rec?'<span class="rec">推荐</span>':''}</div>
+   <div class="story">${p.story}</div>
+   <div class="sw">${sw.map(([n,h])=>`<div style="background:${h};color:${L(h)>.4?'#111':'#eee'}"><span>${n}</span>${h}</div>`).join('')}</div>
+   <div class="ratio"><div>正文对比度<b>${cr(t.ink,t.c)}:1</b></div><div>次要文字<b>${cr(t.mu,t.c)}:1</b></div><div>按钮文字<b>${cr(t.on,t.sig)}:1</b></div></div>
+   <ul class="rules">${p.rules.map(r=>`<li><em>${r[0]}</em>${r[1]}</li>`).join('')}</ul>
+   <div class="fit"><div><b>优势</b>${p.fit[0]}</div><div><b>代价</b>${p.fit[1]}</div></div>
+   <div class="ref">${p.ref}</div>
+  </div></section>`}).join('');
+</script>
+</body>
+</html>
