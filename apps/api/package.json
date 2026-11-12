@@ -8,6 +8,7 @@
     "test": "vitest run",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "admin:create": "tsx scripts/create-admin.ts",
     "dev:db": "tsx scripts/dev-db.ts",
     "db:seed": "tsx prisma/seed.ts",
     "dev": "tsx watch src/main.ts",

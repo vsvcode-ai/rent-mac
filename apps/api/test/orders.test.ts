@@ -16,7 +16,13 @@ describe('套餐', () => {
       totalCents: 598800,
       dedicatedSupport: true,
     });
-    expect(r.body.available).toBe(200);
+    // 各测试文件共用一个库，所以按库里的实际空闲数核对，而不是写死 200
+    const idle = await ctx.prisma.device.count({ where: { status: 'idle' } });
+    const queued = await ctx.prisma.order.aggregate({
+      _sum: { quantity: true },
+      where: { status: 'queued' },
+    });
+    expect(r.body.available).toBe(Math.max(0, idle - (queued._sum.quantity ?? 0)));
   });
 });
 
