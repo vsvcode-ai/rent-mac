@@ -118,13 +118,17 @@ export class LifecycleService {
       const left = l.endAt.getTime() - now.getTime();
       if (left > 0) {
         // 到期前 7 / 3 / 1 天：首次发现已落在较小节点时只发最小的那条，较大的静默记录
-        const hit = EXPIRY_REMIND_DAYS.filter((d) => left <= d * DAY_MS);
+        const hit = EXPIRY_REMIND_DAYS.filter((d) => left <= d * DAY_MS).sort((x, y) => x - y);
         if (hit.length) {
-          const fresh = await this.once(hit.map((d) => `${base}expiry_${d}${sfx}`));
-          if (fresh.length) {
-            const smallest = Math.min(
-              ...hit.filter((d) => fresh.includes(`${base}expiry_${d}${sfx}`)),
-            );
+          // 只抢占「最小的已到达节点」这一个键：并发 tick 时只有一个能抢到，
+          // 抢到的人再静默记录较大的节点，避免补发 7 天 / 3 天这类过期提醒
+          const smallest = hit[0]!;
+          const claimed = await this.once([`${base}expiry_${smallest}${sfx}`]);
+          if (claimed.length) {
+            await this.prisma.reminderLog.createMany({
+              data: hit.slice(1).map((d) => ({ key: `${base}expiry_${d}${sfx}` })),
+              skipDuplicates: true,
+            });
             await this.notify.notify(
               l.userId,
               `expiry_${smallest}`,

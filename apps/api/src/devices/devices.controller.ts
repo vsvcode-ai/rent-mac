@@ -99,7 +99,9 @@ export class HeartbeatController {
   @HttpCode(204)
   async beat(
     @Headers('x-device-token') token: string | undefined,
-    @Body(new ZodPipe(heartbeatSchema)) _b: unknown,
+    // 只做格式校验（拒绝非法数值）；uptime / load 暂不入库
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @Body(new ZodPipe(heartbeatSchema.optional())) _b: unknown,
   ) {
     await this.svc.heartbeat(token);
   }

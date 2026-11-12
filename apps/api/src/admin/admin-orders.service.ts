@@ -528,8 +528,8 @@ export class AdminOrdersService {
     });
     if (!leases.length) throw new ConflictException('订单没有进行中的租约');
     const startAt = leases.reduce((m, l) => (l.startAt < m ? l.startAt : m), leases[0]!.startAt);
-    const days = Math.ceil((startAt.getTime() - o.deadlineAt.getTime()) / DAY_MS);
-    if (days <= 0) throw new BadRequestException('该订单没有超过开通时限，无需补偿');
+    const days = Math.floor((startAt.getTime() - o.deadlineAt.getTime()) / DAY_MS);
+    if (days <= 0) throw new BadRequestException('开通超期不足 1 天，无需补偿');
     await this.prisma.$transaction(async (tx) => {
       const g = await tx.reminderLog.createMany({
         data: [{ key: `compensate:${o.id}` }],
