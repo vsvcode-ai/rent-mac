@@ -18,6 +18,8 @@ ADMIN_PASSWORD='至少12位密码' pnpm --filter @nyd/api admin:create you@examp
 pnpm dev:api                 # http://localhost:4000
 pnpm dev:web                 # http://localhost:3000（/api 与 /uploads 转发到 API_URL，默认 4000）
 ```
+本地快速试用：`pnpm --filter @nyd/api dev:demo` 创建测试账号（密码 `Demo-Passw0rd!!`）与客服联系方式、闲鱼链接；`pnpm --filter @nyd/api dev:totp <邮箱>` 打印管理员当前动态码（免手机验证器）。邮件验证码在 API 日志里。
+
 管理员首次登录 `/admin/login` 必须绑定两步验证并保存恢复码。
 
 ## 检查
