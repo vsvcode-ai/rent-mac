@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DAY_MS } from '@nyd/shared';
+import { DAY_MS, GRACE_DAYS } from '@nyd/shared';
 import { AuditService } from '../admin/audit.service.js';
 import { Clock } from '../common/clock.js';
 import { CryptoService } from '../crypto/crypto.service.js';
@@ -56,6 +56,28 @@ export class LeasesService {
     await this.prisma.credentialView.create({ data: { leaseId, adminId, ip, userAgent: ua } });
     await this.audit.log(adminId, 'credential.view', `lease:${leaseId}`, undefined, ip);
     return this.decrypt(l.credential);
+  }
+
+  /**
+   * 手动修改到期时间。续费功能（M2）上线前，续费由客服在这里手动延长；上线后也用于补偿停机时长。
+   * 宽限期随之重算，必须填原因并留审计日志。
+   */
+  async setEndAt(adminId: string, leaseId: string, endAt: Date, reason: string, ip?: string) {
+    const l = await this.prisma.lease.findUnique({ where: { id: leaseId } });
+    if (!l || l.status === 'ended') throw new NotFoundException('租约不存在或已结束');
+    const graceEndAt = new Date(endAt.getTime() + GRACE_DAYS * DAY_MS);
+    const u = await this.prisma.lease.update({
+      where: { id: leaseId },
+      data: { endAt, graceEndAt, status: 'active' },
+    });
+    await this.audit.log(
+      adminId,
+      'lease.set_end_at',
+      `lease:${leaseId}`,
+      { from: l.endAt.toISOString(), to: endAt.toISOString(), reason },
+      ip,
+    );
+    return { id: u.id, endAt: u.endAt, graceEndAt: u.graceEndAt };
   }
 
   private decrypt(c: {

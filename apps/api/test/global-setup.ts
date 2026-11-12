@@ -25,6 +25,7 @@ export async function setup() {
   await pg.createDatabase('nyd_test');
   const url = `postgresql://nyd:nyd@localhost:${PORT}/nyd_test`;
   process.env.DATABASE_URL = url;
+  process.env.UPLOAD_DIR = join(dir, 'uploads');
   const env = { ...process.env, DATABASE_URL: url };
   execSync('pnpm prisma migrate deploy', { stdio: 'pipe', env });
   execSync('pnpm tsx prisma/seed.ts', { stdio: 'pipe', env });

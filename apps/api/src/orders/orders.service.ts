@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import {
   ACTIVATION_DEADLINE_DAYS,
-  PENDING_EXPIRE_HOURS,
   HOUR_MS,
   assertOrderTransition,
   calcPrice,
@@ -15,6 +14,7 @@ import {
   type SubmitXianyuInput,
 } from '@nyd/shared';
 import type { Order, Plan, Prisma } from '@prisma/client';
+import { SettingsService } from '../settings/settings.service.js';
 import { Clock } from '../common/clock.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -47,6 +47,7 @@ export class OrdersService {
   constructor(
     private prisma: PrismaService,
     private clock: Clock,
+    private settings: SettingsService,
   ) {}
 
   private async nextOrderNo(now: Date) {
@@ -91,7 +92,9 @@ export class OrdersService {
         contactWechat: input.contactWechat || null,
         contactTelegram: input.contactTelegram || null,
         status: 'pending',
-        expiresAt: new Date(now.getTime() + PENDING_EXPIRE_HOURS * HOUR_MS),
+        expiresAt: new Date(
+          now.getTime() + (await this.settings.number('order.pendingExpireHours')) * HOUR_MS,
+        ),
       },
     });
     return orderView(o, plan);

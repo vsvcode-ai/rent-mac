@@ -5,10 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  ACTIVATION_DEADLINE_DAYS,
   ACTIVATION_WARN_DAYS,
   DAY_MS,
-  GRACE_DAYS,
   HOUR_MS,
   VERIFY_REMIND_HOURS,
   assertDeviceTransition,
@@ -20,6 +18,7 @@ import type { AdminUser, Order, Prisma } from '@prisma/client';
 import { Clock } from '../common/clock.js';
 import { CryptoService } from '../crypto/crypto.service.js';
 import { NotifyService } from '../notify/notify.service.js';
+import { SettingsService } from '../settings/settings.service.js';
 import { PlansService } from '../plans/plans.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditService } from './audit.service.js';
@@ -41,6 +40,7 @@ export class AdminOrdersService {
     private notify: NotifyService,
     private crypto: CryptoService,
     private plans: PlansService,
+    private settings: SettingsService,
   ) {}
 
   /** 给后台列表附带提醒标记：核对超 24 小时、开通剩余天数 / 超期 */
@@ -147,13 +147,14 @@ export class AdminOrdersService {
       if (dup) throw new ConflictException('该闲鱼订单号已被其他订单使用');
     }
     const now = this.clock.now();
+    const deadlineDays = await this.settings.number('activation.deadlineDays');
     const u = await this.prisma.order.update({
       where: { id: o.id },
       data: {
         status: 'queued',
         paidCents: input.paidCents,
         paidAt: now,
-        deadlineAt: new Date(now.getTime() + ACTIVATION_DEADLINE_DAYS * DAY_MS),
+        deadlineAt: new Date(now.getTime() + deadlineDays * DAY_MS),
         verifiedById: admin.id,
         verifiedAt: now,
         xianyuOrderNo: input.xianyuOrderNo ?? o.xianyuOrderNo,
@@ -170,7 +171,7 @@ export class AdminOrdersService {
       o.userId,
       'payment_confirmed',
       `订单 ${no} 已确认收款`,
-      `我们已确认订单 ${no} 的付款，将在 ${ACTIVATION_DEADLINE_DAYS} 天内为你开通，开通后会通过邮件和站内信通知你。`,
+      `我们已确认订单 ${no} 的付款，将在 ${deadlineDays} 天内为你开通，开通后会通过邮件和站内信通知你。`,
     );
     const stock = await this.plans.stock();
     return {
@@ -231,7 +232,11 @@ export class AdminOrdersService {
       throw new BadRequestException('同一台机器不能重复分配');
 
     const now = this.clock.now();
-    const { endAt, graceEndAt } = leaseDates(now, o.months, GRACE_DAYS);
+    const { endAt, graceEndAt } = leaseDates(
+      now,
+      o.months,
+      await this.settings.number('lease.graceDays'),
+    );
     const leaseIds = await this.prisma.$transaction(async (tx) => {
       const ids: string[] = [];
       for (const a of assignments) {

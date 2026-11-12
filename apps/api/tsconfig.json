@@ -7,7 +7,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "strictPropertyInitialization": false,
-    "types": ["node"]
+    "types": ["node", "multer"]
   },
   "include": ["src", "test", "prisma/seed.ts", "scripts", "vitest.config.ts"]
 }

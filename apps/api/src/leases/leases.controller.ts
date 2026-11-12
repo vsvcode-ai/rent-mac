@@ -1,10 +1,27 @@
-import { Controller, Get, Param, Post, Req, UseGuards, HttpCode, Patch } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+  HttpCode,
+  Patch,
+} from '@nestjs/common';
 import type { AdminUser, User } from '@prisma/client';
 import type { Request } from 'express';
+import { z } from 'zod';
+import { ZodPipe } from '../common/zod.pipe.js';
 import { AdminGuard, CurrentAdmin, Roles } from '../admin/admin.guard.js';
 import { AuthGuard, CurrentUser } from '../auth/auth.guard.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { LeasesService } from './leases.service.js';
+
+const endAtSchema = z.object({
+  endAt: z.coerce.date(),
+  reason: z.string().trim().min(2, '请填写原因').max(200),
+});
 
 @Controller()
 export class LeasesController {
@@ -33,6 +50,18 @@ export class LeasesController {
   @Roles('ops')
   adminCredential(@CurrentAdmin() a: AdminUser, @Param('id') id: string, @Req() req: Request) {
     return this.svc.credentialForAdmin(a.id, id, req.ip, req.headers['user-agent']);
+  }
+
+  @Patch('admin/leases/:id/end-at')
+  @UseGuards(AdminGuard)
+  @Roles('admin')
+  setEndAt(
+    @CurrentAdmin() a: AdminUser,
+    @Param('id') id: string,
+    @Body(new ZodPipe(endAtSchema)) b: { endAt: Date; reason: string },
+    @Req() req: Request,
+  ) {
+    return this.svc.setEndAt(a.id, id, b.endAt, b.reason, req.ip);
   }
 
   @Get('me/notifications')
