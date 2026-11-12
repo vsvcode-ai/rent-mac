@@ -80,7 +80,7 @@ export class AdminOrdersService {
         { user: { email: { contains: q.keyword, mode: 'insensitive' } } },
       ];
     }
-    const [total, rows] = await Promise.all([
+    const [total, rows, groups] = await Promise.all([
       this.prisma.order.count({ where }),
       this.prisma.order.findMany({
         where,
@@ -89,8 +89,12 @@ export class AdminOrdersService {
         skip: (q.page - 1) * q.pageSize,
         take: q.pageSize,
       }),
+      // 各状态的订单数，用于筛选条上的计数（不受当前筛选影响）
+      this.prisma.order.groupBy({ by: ['status'], _count: true }),
     ]);
-    return { total, items: rows.map((o) => this.view(o)) };
+    const counts: Record<string, number> = { all: groups.reduce((a, g) => a + g._count, 0) };
+    for (const g of groups) counts[g.status] = g._count;
+    return { total, counts, items: rows.map((o) => this.view(o)) };
   }
 
   async detail(no: string) {

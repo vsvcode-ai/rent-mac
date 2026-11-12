@@ -18,6 +18,7 @@ export default defineConfig({
   projects: [
     { name: 'setup', testMatch: /setup\.spec\.ts/ },
     { name: 'flow', testMatch: /flow\.spec\.ts/, dependencies: ['setup'] },
+    { name: 'security', testMatch: /security\.spec\.ts/, dependencies: ['flow'] },
     { name: 'viewports', testMatch: /viewports\.spec\.ts/, dependencies: ['flow'] },
   ],
   webServer: [
@@ -27,6 +28,8 @@ export default defineConfig({
       url: `${API}/api/plans`,
       timeout: 180_000,
       reuseExistingServer: false,
+      // 给内嵌 Postgres 留出正常关闭的时间，否则会留下孤儿共享内存段，多跑几次后新库会因 No space left on device 起不来
+      gracefulShutdown: { signal: 'SIGTERM', timeout: 15_000 },
     },
     {
       // rewrites 在 build 时固化，所以必须带着 API_URL 先 build 再 start

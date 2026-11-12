@@ -8,7 +8,14 @@ test.describe.configure({ mode: 'serial' });
 const AUTH = (r: string) => `e2e/.results/auth-${r}.json`;
 const ctxs: Record<string, BrowserContext> = {};
 const pages: Record<string, Page> = {};
-const st: { no?: string; renewNo?: string; leaseId?: string; endBefore?: string; refundNo?: string; idleBefore?: number } = {};
+const st: {
+  no?: string;
+  renewNo?: string;
+  leaseId?: string;
+  endBefore?: string;
+  refundNo?: string;
+  idleBefore?: number;
+} = {};
 
 async function as(browser: Browser, role: 'buyer' | 'support' | 'ops' | 'admin'): Promise<Page> {
   if (!pages[role]) {
@@ -46,7 +53,9 @@ async function verifyInAdmin(p: Page, no: string, amount: string) {
   return modal;
 }
 
-test('1 首页：价格来自接口，选半年付 × 2 台，总价 ¥7,188，立即租用 → 登录页带 next，登录后回到下单页', async ({ browser }) => {
+test('1 首页：价格来自接口，选半年付 × 2 台，总价 ¥7,188，立即租用 → 登录页带 next，登录后回到下单页', async ({
+  browser,
+}) => {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   await page.goto('/');
@@ -57,7 +66,10 @@ test('1 首页：价格来自接口，选半年付 × 2 台，总价 ¥7,188，�
   await page.getByRole('button', { name: '增加' }).click();
   await expect(page.locator('.summary .total strong')).toContainText('7,188');
   await expect(page.locator('.summary')).toContainText('含 1 对 1 专属客服');
-  await page.getByRole('link', { name: /立即租用/ }).last().click();
+  await page
+    .getByRole('link', { name: /立即租用/ })
+    .last()
+    .click();
   await expect(page).toHaveURL(/\/auth\?next=%2Forder%2Fnew/);
   await page.locator('#email').fill('buyer@e2e.test');
   await page.locator('#pwd').fill('Buyer-Passw0rd!');
@@ -70,13 +82,18 @@ test('1 首页：价格来自接口，选半年付 × 2 台，总价 ¥7,188，�
   await ctx.close();
 });
 
-test('2 下单：联系方式 + 条款 → 付款页 → 填闲鱼订单号（短单号被拦）→ 待核对', async ({ browser }) => {
+test('2 下单：联系方式 + 条款 → 付款页 → 填闲鱼订单号（短单号被拦）→ 待核对', async ({
+  browser,
+}) => {
   const page = await as(browser, 'buyer');
   // 选择保存在 sessionStorage，新页面上下文里重新选一次：已登录时「立即租用」直接进入下单页
   await page.goto('/');
   await page.locator('.term[data-term=m6]').click();
   await page.getByRole('button', { name: '增加' }).click();
-  await page.getByRole('link', { name: /立即租用/ }).last().click();
+  await page
+    .getByRole('link', { name: /立即租用/ })
+    .last()
+    .click();
   await expect(page).toHaveURL(/\/order\/new$/);
   await expect(page.locator('body')).toContainText('7,188');
   // 没填联系方式 / 没勾选条款不能提交
@@ -125,9 +142,14 @@ test('4 运维开通：批量粘贴表格分配 2 台机器', async ({ browser }
   await card.getByRole('button', { name: '分配开通' }).click();
   const modal = p.locator('.modal');
   await modal.locator('summary').click();
-  await modal.locator('textarea').fill(
-    ['NYD-MY-0001\t583920174\tuu-pass-1\tnydesk\tmac-pass-1', 'NYD-MY-0002,583920175,uu-pass-2,nydesk,mac-pass-2'].join('\n'),
-  );
+  await modal
+    .locator('textarea')
+    .fill(
+      [
+        'NYD-MY-0001\t583920174\tuu-pass-1\tnydesk\tmac-pass-1',
+        'NYD-MY-0002,583920175,uu-pass-2,nydesk,mac-pass-2',
+      ].join('\n'),
+    );
   await modal.getByRole('button', { name: '解析并填入' }).click();
   await expect(modal.locator('input.input.mono').first()).toHaveValue('583920174');
   // 没勾选检查项不能提交
@@ -140,7 +162,9 @@ test('4 运维开通：批量粘贴表格分配 2 台机器', async ({ browser }
   expect(o.status).toBe('active');
 });
 
-test('5 买家：设备页 2 台，连接信息默认隐藏，显示后明文可复制，后端留查看记录，铃铛有「已开通」', async ({ browser }) => {
+test('5 买家：设备页 2 台，连接信息默认隐藏，显示后明文可复制，后端留查看记录，铃铛有「已开通」', async ({
+  browser,
+}) => {
   const p = await as(browser, 'buyer');
   await p.goto('/account/devices');
   const cards = p.locator('.dev');
@@ -166,7 +190,9 @@ test('5 买家：设备页 2 台，连接信息默认隐藏，显示后明文可
   st.endBefore = r.find((l: { id: string }) => l.id === st.leaseId).endAt;
 });
 
-test('6 续费：设备页续费 → 续费单 → 填闲鱼单号；客服核对后到期时间自动延长一个月', async ({ browser }) => {
+test('6 续费：设备页续费 → 续费单 → 填闲鱼单号；客服核对后到期时间自动延长一个月', async ({
+  browser,
+}) => {
   const p = await as(browser, 'buyer');
   await p.goto('/account/devices');
   await p.locator('.dev').first().getByRole('link', { name: '续费' }).click();
@@ -191,7 +217,9 @@ test('6 续费：设备页续费 → 续费单 → 填闲鱼单号；客服核�
   const after = leases.find((l: { id: string }) => l.id === st.leaseId).endAt;
   const b = new Date(st.endBefore!);
   const a = new Date(after);
-  expect((a.getUTCFullYear() - b.getUTCFullYear()) * 12 + a.getUTCMonth() - b.getUTCMonth()).toBe(1);
+  expect((a.getUTCFullYear() - b.getUTCFullYear()) * 12 + a.getUTCMonth() - b.getUTCMonth()).toBe(
+    1,
+  );
   await p.goto(`/order/${st.renewNo}`);
   await expect(p.locator('body')).toContainText('已续费，到期时间已延长');
 });
@@ -220,27 +248,61 @@ test('7 工单：买家提交 → 运维回复（对用户可见）→ 买家看
   await expect(o.locator('body')).toContainText('已回复，用户会收到站内通知');
 
   await p.goto('/account/tickets');
-  await p.locator('tr', { hasText: 'UU 远程提示设备离线' }).getByRole('button', { name: /详情/ }).click();
+  await p
+    .locator('tr', { hasText: 'UU 远程提示设备离线' })
+    .getByRole('button', { name: /详情/ })
+    .click();
   await expect(p.locator('body')).toContainText('请在设备上重新登录 UU 远程');
 });
 
-test('8 退款与回收：管理员退款预览 → 完成退款；运维回收三项检查 → 机器回到空闲、库存恢复', async ({ browser }) => {
+test('8 退款与回收：管理员退款预览 → 完成退款；运维回收三项检查 → 机器回到空闲、库存恢复', async ({
+  browser,
+}) => {
   // 先造第二个订单（API 快速走到「使用中」），再用界面退款
   const buyer = await as(browser, 'buyer');
   const support = await as(browser, 'support');
   const ops = await as(browser, 'ops');
-  const stock = async () => (await (await buyer.request.get('/api/plans')).json()).available as number;
+  const stock = async () =>
+    (await (await buyer.request.get('/api/plans')).json()).available as number;
   const stockBefore = await stock();
   const created = await buyer.request.post('/api/orders', {
     data: { term: 'm3', quantity: 1, contactWechat: 'wx', agreedTerms: true },
   });
   expect(created.ok()).toBeTruthy();
   st.refundNo = (await created.json()).no;
-  expect((await buyer.request.post(`/api/orders/${st.refundNo}/xianyu`, { data: { xianyuOrderNo: '4103928812000', xianyuBuyerNick: 'r' } })).ok()).toBeTruthy();
-  expect((await support.request.post(`/api/admin/orders/${st.refundNo}/verify`, { data: { paidCents: 209700, confirmedAmount: true, confirmedQuantity: true } })).ok()).toBeTruthy();
+  expect(
+    (
+      await buyer.request.post(`/api/orders/${st.refundNo}/xianyu`, {
+        data: { xianyuOrderNo: '4103928812000', xianyuBuyerNick: 'r' },
+      })
+    ).ok(),
+  ).toBeTruthy();
+  expect(
+    (
+      await support.request.post(`/api/admin/orders/${st.refundNo}/verify`, {
+        data: { paidCents: 209700, confirmedAmount: true, confirmedQuantity: true },
+      })
+    ).ok(),
+  ).toBeTruthy();
   const idle = await (await ops.request.get('/api/admin/devices/idle')).json();
   const dev = idle[0];
-  expect((await ops.request.post(`/api/admin/orders/${st.refundNo}/activate`, { data: { devices: [{ deviceId: dev.id, uuDeviceCode: '999', uuPassword: 'a', macUsername: 'u', macPassword: 'b' }] } })).ok()).toBeTruthy();
+  expect(
+    (
+      await ops.request.post(`/api/admin/orders/${st.refundNo}/activate`, {
+        data: {
+          devices: [
+            {
+              deviceId: dev.id,
+              uuDeviceCode: '999',
+              uuPassword: 'a',
+              macUsername: 'u',
+              macPassword: 'b',
+            },
+          ],
+        },
+      })
+    ).ok(),
+  ).toBeTruthy();
 
   const admin = await as(browser, 'admin');
   const row = await searchOrder(admin, st.refundNo!);
@@ -250,7 +312,10 @@ test('8 退款与回收：管理员退款预览 → 完成退款；运维回收�
   await expect(m).toContainText('建议');
   await m.locator('textarea').fill('用户申请退款');
   await m.locator('input.mono').fill('4103928812001');
-  await m.getByRole('button', { name: /确认退款|提交|登记|完成/ }).last().click();
+  await m
+    .getByRole('button', { name: /确认退款|提交|登记|完成/ })
+    .last()
+    .click();
   await expect(admin.locator('.toast.on')).toContainText('已退款');
   const o = await db.order.findUnique({ where: { no: st.refundNo } });
   expect(o.status).toBe('refunded');
@@ -280,10 +345,12 @@ test('9 权限：客服看不到开通入口，直接访问开通队列有明确
   const r = await p.request.get('/api/admin/provision/queue');
   expect(r.status()).toBe(403);
   // 管理端接口不能被缓存
-  expect(r.headers()['cache-control'] ?? '').toMatch(/no-store|no-cache|private|^$/);
+  expect(r.headers()['cache-control']).toContain('no-store');
 });
 
-test('10 设置：改价后出现「同步闲鱼」提示；重置他人两步验证；审计日志有记录', async ({ browser }) => {
+test('10 设置：改价后出现「同步闲鱼」提示；重置他人两步验证；审计日志有记录', async ({
+  browser,
+}) => {
   const p = await as(browser, 'admin');
   await p.goto('/admin/settings');
   const priceInput = p.locator('.set-row', { hasText: '月付（1 个月）' }).locator('input').first();
@@ -298,7 +365,10 @@ test('10 设置：改价后出现「同步闲鱼」提示；重置他人两步�
   await expect(p.locator('.modal-bg.on')).toHaveCount(0);
 
   p.once('dialog', (d) => void d.accept());
-  await p.locator('tr', { hasText: 'victim@e2e.test' }).getByRole('button', { name: '重置两步验证' }).click();
+  await p
+    .locator('tr', { hasText: 'victim@e2e.test' })
+    .getByRole('button', { name: '重置两步验证' })
+    .click();
   await expect(p.locator('body')).toContainText('已重置');
   await p.reload();
   await expect(p.locator('body')).toContainText('admin.totp.reset');

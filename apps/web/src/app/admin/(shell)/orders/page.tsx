@@ -14,7 +14,8 @@ import {
 import { OrderDetailModal, VerifyModal, termName } from '@/components/admin/order-modals';
 import { fmtDate, ago, yuan } from '@/lib/format';
 import { useApi } from '@/lib/hooks';
-import type { AdminOrder, Paged } from '@/lib/admin-types';
+import type { AdminOrder, OrderPaged } from '@/lib/admin-types';
+import { ActivateModal } from '@/components/admin/activate-modal';
 
 const PAGE = 20;
 
@@ -28,13 +29,14 @@ export default function OrdersPage() {
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState<string | null>(null);
   const [verify, setVerify] = useState<AdminOrder | null>(null);
+  const [activate, setActivate] = useState<AdminOrder | null>(null);
   const [exportDate, setExportDate] = useState(() => new Date().toISOString().slice(0, 10));
   useEffect(() => setKw(urlKeyword), [urlKeyword]);
   const keyword = useDebounced(kw);
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE) });
   if (status) qs.set('status', status);
   if (keyword) qs.set('keyword', keyword);
-  const { data, error, reload } = useApi<Paged<AdminOrder>>(`/admin/orders?${qs}`);
+  const { data, error, reload } = useApi<OrderPaged<AdminOrder>>(`/admin/orders?${qs}`);
 
   const setFilter = (s: string) => {
     setPage(1);
@@ -49,11 +51,12 @@ export default function OrdersPage() {
     <>
       <div className="bar-h">
         <span className={`chip ${!status ? 'on' : ''}`} onClick={() => setFilter('')}>
-          全部
+          全部<em>{data?.counts?.all ?? ''}</em>
         </span>
         {ORDER_STATUSES.map((s) => (
           <span key={s} className={`chip ${status === s ? 'on' : ''}`} onClick={() => setFilter(s)}>
             {ORDER_STATUS_LABEL[s]}
+            <em>{data?.counts?.[s] ?? 0}</em>
           </span>
         ))}
         <span style={{ flex: 1 }} />
@@ -159,6 +162,10 @@ export default function OrdersPage() {
                         <button className="btn btn-primary xs" onClick={() => setVerify(o)}>
                           核对收款
                         </button>
+                      ) : o.status === 'queued' && o.kind === 'new' && can('ops') ? (
+                        <button className="btn btn-dark xs" onClick={() => setActivate(o)}>
+                          分配开通
+                        </button>
                       ) : (
                         <button className="btn btn-ghost xs" onClick={() => setDetail(o.no)}>
                           详情
@@ -187,6 +194,7 @@ export default function OrdersPage() {
           {data && <Pager page={page} pageSize={PAGE} total={data.total} onPage={setPage} />}
         </div>
       )}
+      <ActivateModal order={activate} onClose={() => setActivate(null)} onDone={changed} />
       <VerifyModal order={verify} onClose={() => setVerify(null)} onDone={changed} />
       <OrderDetailModal no={detail} onClose={() => setDetail(null)} onChanged={changed} />
     </>

@@ -2618,9 +2618,16 @@ select.input {
   top: 84px;
 }
 .side .me {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
   padding: 4px 10px 20px;
   margin-bottom: 12px;
   border-bottom: 1px solid var(--hl);
+}
+.side .me .me-id {
+  min-width: 0;
 }
 .side .me b {
   display: block;
@@ -3165,6 +3172,32 @@ table.tbl {
     gap: 28px;
   }
 }
+/* 通知下拉：桌面从铃铛向右展开（侧栏在页面左侧，向左会被裁出屏幕）；手机固定在屏幕内居中 */
+.bell-pop {
+  position: absolute;
+  left: 0;
+  top: 40px;
+  width: 320px;
+  max-width: 86vw;
+  max-height: 420px;
+  overflow: auto;
+  z-index: 50;
+  background: var(--s2);
+  border: 1px solid var(--hl2);
+  border-radius: 12px;
+  padding: 6px;
+}
+@media (max-width: 860px) {
+  .bell-pop {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    top: 76px;
+    width: auto;
+    max-width: none;
+  }
+}
+
 @media (max-width: 860px) {
   :root {
     --gut: 20px;
@@ -3181,6 +3214,13 @@ table.tbl {
   .faq-wrap,
   .sec-head.split {
     grid-template-columns: 1fr;
+  }
+  /* 1fr 的最小宽度是内容宽度：账户导航（一行标签）会把整列撑到 557px，造成整页横向滚动 */
+  .acct {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .acct > * {
+    min-width: 0;
   }
   .sec-head.split {
     gap: 20px;
@@ -3279,6 +3319,13 @@ table.tbl {
     padding-bottom: 10px;
   }
   .side .me {
+    padding: 0;
+    margin: 0;
+    border: 0;
+    flex: none;
+  }
+  /* 手机上导航是一行标签：邮箱不显示，只留通知铃铛 */
+  .side .me .me-id {
     display: none;
   }
   .side a {

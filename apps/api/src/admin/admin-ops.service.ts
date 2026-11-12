@@ -144,6 +144,8 @@ export class AdminOpsService {
     const idle = cnt('idle');
     const leased = cnt('in_use', 'expiring', 'grace');
     const utilization = {
+      inUse: cnt('in_use'),
+      expiring: cnt('expiring', 'grace'),
       total: statusGroups.filter((g) => g.status !== 'retired').reduce((a, g) => a + g._count, 0),
       leased,
       idle,
@@ -157,6 +159,41 @@ export class AdminOpsService {
       const k = dayKey(o.createdAt);
       if (buckets.has(k)) buckets.set(k, buckets.get(k)! + 1);
     }
+    // 看板「待办」里的订单行：待核对（最早提交的在前）+ 待开通（最接近截止的在前）
+    const [verifyRows, queueRows, expiringRows] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { status: 'verifying' },
+        orderBy: { xianyuSubmittedAt: 'asc' },
+        take: 3,
+        include: { user: { select: { email: true } } },
+      }),
+      this.prisma.order.findMany({
+        where: { status: 'queued', kind: 'new' },
+        orderBy: { deadlineAt: 'asc' },
+        take: 3,
+        include: { user: { select: { email: true } } },
+      }),
+      this.prisma.lease.findMany({
+        where: { status: { not: 'ended' }, endAt: { gte: now, lte: new Date(nowMs + 7 * DAY_MS) } },
+        orderBy: { endAt: 'asc' },
+        take: 4,
+        include: { device: { select: { code: true } }, user: { select: { email: true } } },
+      }),
+    ]);
+    const pendingOrders = [...verifyRows, ...queueRows].map((o) => ({
+      no: o.no,
+      status: o.status as 'verifying' | 'queued',
+      userEmail: o.user.email,
+      quantity: o.quantity,
+      submittedAt: o.xianyuSubmittedAt,
+      remainingMs: o.deadlineAt ? o.deadlineAt.getTime() - nowMs : null,
+    }));
+    const expiringSoon = expiringRows.map((l) => ({
+      leaseId: l.id,
+      code: l.device.code,
+      userEmail: l.user.email,
+      daysLeft: Math.max(1, Math.ceil((l.endAt.getTime() - nowMs) / DAY_MS)),
+    }));
     const todos: { type: string; text: string; href: string }[] = [];
     if (verifyOverdue)
       todos.push({
@@ -217,6 +254,8 @@ export class AdminOpsService {
       monthRevenueCents: revenue._sum.paidCents ?? 0,
       ordersLast14d: [...buckets].map(([date, count]) => ({ date, count })),
       utilization,
+      pendingOrders,
+      expiringSoon,
       todos,
     };
   }

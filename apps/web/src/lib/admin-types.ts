@@ -21,6 +21,8 @@ export interface Dashboard {
   monthRevenueCents: number;
   ordersLast14d: { date: string; count: number }[];
   utilization: {
+    inUse: number;
+    expiring: number;
     total: number;
     leased: number;
     idle: number;
@@ -28,6 +30,15 @@ export interface Dashboard {
     fault: number;
     recycling: number;
   };
+  pendingOrders: {
+    no: string;
+    status: 'verifying' | 'queued';
+    userEmail: string;
+    quantity: number;
+    submittedAt: string | null;
+    remainingMs: number | null;
+  }[];
+  expiringSoon: { leaseId: string; code: string; userEmail: string; daysLeft: number }[];
   todos: { type: string; text: string; href: string }[];
 }
 
@@ -61,9 +72,19 @@ export interface AdminOrder {
 export interface AdminOrderDetail extends AdminOrder {
   devices: { leaseId: string; code: string; publicIp: string; startAt: string; endAt: string }[];
 }
+export interface OrderPaged<T> extends Paged<T> {
+  /** 各状态订单数，all 为总数 */
+  counts?: Record<string, number>;
+}
+
 export interface Paged<T> {
   total: number;
   items: T[];
+}
+
+export interface OrderPaged<T> extends Paged<T> {
+  /** 各状态订单数，all 为总数 */
+  counts?: Record<string, number>;
 }
 
 export interface DeviceRow {

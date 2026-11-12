@@ -646,12 +646,20 @@ body.adm {
     grid-template-columns: repeat(3, 1fr);
   }
   .g2 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 860px) {
+  /* 1fr 的最小宽度是内容宽度，会被长行撑出屏幕；minmax(0,1fr) 才会收缩，行内容改为换行 */
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .shell > *,
+  .g2 > * {
+    min-width: 0;
+  }
+  .todo-i {
+    flex-wrap: wrap;
   }
   .aside {
     position: static;
@@ -699,4 +707,16 @@ body.adm {
 .todo-i .pill,
 .todo-i .btn {
   flex: none;
+}
+
+/* 手机上待办行里的时间 / 编号不换行，避免被挤成竖排 */
+.todo-i .muted,
+.todo-i .mono,
+.todo-i .pill {
+  white-space: nowrap;
+}
+.todo-i b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

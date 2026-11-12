@@ -43,16 +43,8 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
         {me ? (
           <>
             <nav className="side">
-              <div
-                className="me"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
+              <div className="me">
+                <div className="me-id">
                   <b style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {me.email}
                   </b>

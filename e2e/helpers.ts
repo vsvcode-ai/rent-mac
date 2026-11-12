@@ -39,5 +39,8 @@ export async function buyerLogin(page: Page, next = '/account') {
   await page.goto(`/auth?next=${encodeURIComponent(next)}`);
   await page.locator('#email').fill(BUYER.email);
   await page.locator('#pwd').fill(BUYER.password);
-  await page.getByRole('button', { name: /^登录$/ }).last().click();
+  await page
+    .getByRole('button', { name: /^登录$/ })
+    .last()
+    .click();
 }

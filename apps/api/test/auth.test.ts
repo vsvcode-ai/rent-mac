@@ -5,6 +5,39 @@ let ctx: TestCtx;
 beforeAll(async () => (ctx = await createApp()));
 afterAll(() => ctx.app.close());
 
+describe('缓存', () => {
+  it('所有 /api 响应都带 Cache-Control: no-store（含未登录的 401）', async () => {
+    const r1 = await ctx.http().get('/api/me').expect(401);
+    expect(r1.headers['cache-control']).toBe('no-store');
+    const r2 = await ctx.http().get('/api/plans').expect(200);
+    expect(r2.headers['cache-control']).toBe('no-store');
+    const { agent } = await registerUser(ctx);
+    const r3 = await agent.get('/api/me').expect(200);
+    expect(r3.headers['cache-control']).toBe('no-store');
+  });
+});
+
+describe('会话 Cookie 属性', () => {
+  it('HttpOnly + SameSite；生产环境带 Secure，本地开发不带（否则 http 下浏览器会丢弃）', async () => {
+    const { email } = await registerUser(ctx);
+    const login = () =>
+      ctx.http().post('/api/auth/login').send({ email, password: 'Passw0rd!x' }).expect(200);
+    const dev = (await login()).headers['set-cookie']![0]!;
+    expect(dev).toContain('HttpOnly');
+    expect(dev).toContain('SameSite=Lax');
+    expect(dev).not.toContain('Secure');
+    const prev = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const prod = (await login()).headers['set-cookie']![0]!;
+      expect(prod).toContain('Secure');
+      expect(prod).toContain('HttpOnly');
+    } finally {
+      process.env.NODE_ENV = prev;
+    }
+  });
+});
+
 describe('认证', () => {
   it('注册 → /api/me → 登出后 401', async () => {
     const { agent, email } = await registerUser(ctx);

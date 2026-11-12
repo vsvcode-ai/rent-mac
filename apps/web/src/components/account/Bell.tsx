@@ -69,22 +69,7 @@ export function Bell() {
         )}
       </button>
       {open && (
-        <div
-          style={{
-            position: 'absolute',
-            right: 0,
-            top: 40,
-            width: 320,
-            maxWidth: '86vw',
-            maxHeight: 420,
-            overflow: 'auto',
-            zIndex: 50,
-            background: 'var(--s2)',
-            border: '1px solid var(--hl2)',
-            borderRadius: 12,
-            padding: 6,
-          }}
-        >
+        <div className="bell-pop">
           {data?.items.length ? (
             data.items.slice(0, 20).map((n) => (
               <div
