@@ -321,3 +321,22 @@ model AuditLog {
   @@index([adminId, createdAt])
   @@index([target])
 }
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  /// 只存令牌的 SHA-256，泄露数据库也拿不到可用会话
+  tokenHash String   @unique
+  expiresAt DateTime
+  userAgent String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// 订单号当日流水，upsert 自增保证并发不重号
+model OrderCounter {
+  day String @id
+  seq Int    @default(0)
+}

@@ -9,3 +9,4 @@ dist/
 !.env.example
 next-env.d.ts
 *.tsbuildinfo
+.pgdata/
