@@ -99,7 +99,8 @@ export function renderMarkdown(src: string): ReactNode[] {
     const h = /^(#{1,3})\s+(.+)$/.exec(line);
     if (h) {
       const level = h[1]!.length;
-      const Tag = `h${level + 1}` as 'h2' | 'h3' | 'h4'; // 文章标题由页面渲染为 h1，正文 # 从 h2 起
+      // 文章标题由页面渲染为 h1，正文里 # 和 ## 都是 h2，### 是 h3
+      const Tag = `h${Math.max(2, level)}` as 'h2' | 'h3';
       out.push(<Tag key={k++}>{inline(h[2]!, `h${k}`)}</Tag>);
       i++;
       continue;
