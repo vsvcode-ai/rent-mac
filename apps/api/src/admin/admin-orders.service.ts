@@ -11,11 +11,13 @@ import {
   VERIFY_REMIND_HOURS,
   assertDeviceTransition,
   assertOrderTransition,
+  calcRefund,
   leaseDates,
   type OrderStatus,
 } from '@nyd/shared';
 import type { AdminUser, Order, Prisma } from '@prisma/client';
 import { Clock } from '../common/clock.js';
+import { devicePath } from '../leases/device-flow.js';
 import { CryptoService } from '../crypto/crypto.service.js';
 import { NotifyService } from '../notify/notify.service.js';
 import { SettingsService } from '../settings/settings.service.js';
@@ -146,10 +148,11 @@ export class AdminOrdersService {
       });
       if (dup) throw new ConflictException('该闲鱼订单号已被其他订单使用');
     }
+    if (o.kind === 'renew') return this.verifyRenew(admin, o, input, ip);
     const now = this.clock.now();
     const deadlineDays = await this.settings.number('activation.deadlineDays');
-    const u = await this.prisma.order.update({
-      where: { id: o.id },
+    const guard = await this.prisma.order.updateMany({
+      where: { id: o.id, status: 'verifying' },
       data: {
         status: 'queued',
         paidCents: input.paidCents,
@@ -160,6 +163,9 @@ export class AdminOrdersService {
         xianyuOrderNo: input.xianyuOrderNo ?? o.xianyuOrderNo,
       },
     });
+    // 条件更新：重复点击 / 并发确认时只有一次生效
+    if (guard.count !== 1) throw new ConflictException('订单状态已变化，请刷新后重试');
+    const u = await this.load(no);
     await this.audit.log(
       admin.id,
       'order.verify',
@@ -292,48 +298,261 @@ export class AdminOrdersService {
     return this.detail(no);
   }
 
-  /**
-   * 退款登记（首版简化）：待开通 / 使用中 → 已退款。
-   * 使用中的订单会同时结束租约，机器进入「回收中」等待抹盘。完整的金额计算和退款单在 M2。
-   */
-  async refund(admin: AdminUser, no: string, reason: string, ip?: string) {
+  /** 续费单确认收款：延长租约。未过期从原到期顺延；已过期（宽限期内）从现在起算。 */
+  private async verifyRenew(
+    admin: AdminUser,
+    o: Order,
+    input: { paidCents: number; xianyuOrderNo?: string },
+    ip?: string,
+  ) {
+    assertOrderTransition(o.status, 'renewed');
+    const now = this.clock.now();
+    const graceDays = await this.settings.number('lease.graceDays');
+    const result = await this.prisma.$transaction(async (tx) => {
+      const lease = await tx.lease.findUnique({
+        where: { id: o.renewLeaseId ?? '' },
+        include: { device: true },
+      });
+      if (!lease || lease.status === 'ended') {
+        throw new ConflictException(
+          '该设备租约已结束（机器已回收），无法续费，请标记核对失败并按退款流程处理',
+        );
+      }
+      // 条件更新：重复点击 / 并发确认时只有一次生效
+      const r = await tx.order.updateMany({
+        where: { id: o.id, status: 'verifying' },
+        data: {
+          status: 'renewed',
+          paidCents: input.paidCents,
+          paidAt: now,
+          verifiedById: admin.id,
+          verifiedAt: now,
+          xianyuOrderNo: input.xianyuOrderNo ?? o.xianyuOrderNo,
+        },
+      });
+      if (r.count !== 1) throw new ConflictException('订单状态已变化，请刷新后重试');
+      const base = lease.endAt > now ? lease.endAt : now;
+      const { endAt, graceEndAt } = leaseDates(base, o.months, graceDays);
+      await tx.lease.update({
+        where: { id: lease.id },
+        data: { endAt, graceEndAt, status: 'active' },
+      });
+      if (lease.device.currentLeaseId === lease.id) {
+        const path = devicePath(lease.device.status, 'in_use');
+        if (path && path.length) {
+          await tx.device.updateMany({
+            where: { id: lease.device.id, status: lease.device.status },
+            data: { status: 'in_use' },
+          });
+        }
+      }
+      await tx.leaseRenewal.create({
+        data: { leaseId: lease.id, orderId: o.id, prevEndAt: lease.endAt, newEndAt: endAt },
+      });
+      return { endAt, code: lease.device.code };
+    });
+    await this.audit.log(
+      admin.id,
+      'order.verify',
+      `order:${o.no}`,
+      { paidCents: input.paidCents, renew: true, newEndAt: result.endAt.toISOString() },
+      ip,
+    );
+    await this.notify.notify(
+      o.userId,
+      'renewed',
+      `设备 ${result.code} 续费成功`,
+      `订单 ${o.no} 已确认收款，设备 ${result.code} 的到期时间已延长至 ${result.endAt.toISOString().slice(0, 10)}。`,
+    );
+    const updated = await this.load(o.no);
+    return {
+      order: this.view(updated),
+      stockWarning: null,
+      available: await this.plans.stock(),
+      newEndAt: result.endAt,
+    };
+  }
+
+  // ---------------- 退款 ----------------
+
+  /** 退款建议金额（按退款政策）。daysUsed 从租约开通日起算。 */
+  async refundPreview(no: string, opts: { unfixable: boolean; aup: boolean }) {
     const o = await this.load(no);
-    if (o.status !== 'queued' && o.status !== 'active')
+    if (o.paidCents == null) throw new ConflictException('订单尚未确认收款，无退款金额可算');
+    const lease = await this.prisma.lease.findFirst({
+      where: { orderId: o.id },
+      orderBy: { startAt: 'asc' },
+    });
+    const now = this.clock.now().getTime();
+    const activated = !!lease;
+    const elapsed = lease ? Math.max(0, now - lease.startAt.getTime()) : 0;
+    const daysUsed = Math.floor(elapsed / DAY_MS);
+    const r = calcRefund({
+      term: o.term,
+      paidCents: o.paidCents,
+      quantity: o.quantity,
+      activated,
+      hoursSinceActivation: elapsed / HOUR_MS,
+      unfixableWithinWindow: opts.unfixable,
+      daysUsed,
+      aupViolation: opts.aup,
+    });
+    return {
+      paidCents: o.paidCents,
+      suggestedCents: r.refundCents,
+      reason: r.reason,
+      daysUsed,
+      usedMonths: activated ? Math.max(1, Math.ceil(daysUsed / 30)) : 0,
+      activated,
+    };
+  }
+
+  /**
+   * 退款登记：待开通 / 使用中 → 退款中（带闲鱼退款单号则直接完成为已退款）。
+   * 使用中的订单同时结束租约，机器进入「回收中」等待抹盘。
+   */
+  async refund(
+    admin: AdminUser,
+    no: string,
+    input: { reason: string; amountCents: number; xianyuRefundNo?: string },
+    ip?: string,
+  ) {
+    const o = await this.load(no);
+    if (o.kind !== 'new' || (o.status !== 'queued' && o.status !== 'active'))
       throw new ConflictException('只有待开通或使用中的订单可以退款');
     assertOrderTransition(o.status, 'refunding');
-    assertOrderTransition('refunding', 'refunded');
-    const leases = await this.prisma.lease.findMany({
-      where: { orderId: o.id, status: { not: 'ended' } },
-      include: { device: true },
-    });
-    await this.prisma.$transaction(async (tx) => {
+    if (o.paidCents == null) throw new ConflictException('订单尚未确认收款');
+    if (input.amountCents > o.paidCents) throw new BadRequestException('退款金额不能超过实付金额');
+    const preview = await this.refundPreview(no, { unfixable: false, aup: false });
+    const now = this.clock.now();
+    const done = !!input.xianyuRefundNo;
+    const ended = await this.prisma.$transaction(async (tx) => {
+      const r = await tx.order.updateMany({
+        where: { id: o.id, status: o.status },
+        data: { status: done ? 'refunded' : 'refunding' },
+      });
+      if (r.count !== 1) throw new ConflictException('订单状态已变化，请刷新后重试');
+      const leases = await tx.lease.findMany({
+        where: { orderId: o.id, status: { not: 'ended' } },
+        include: { device: true },
+      });
       for (const l of leases) {
-        assertDeviceTransition(l.device.status, 'recycling');
-        await tx.lease.update({ where: { id: l.id }, data: { status: 'ended' } });
+        await tx.lease.update({ where: { id: l.id }, data: { status: 'ended', endedAt: now } });
+        if (l.device.currentLeaseId !== l.id) continue;
+        const path = devicePath(l.device.status, 'recycling');
         await tx.device.update({
           where: { id: l.deviceId },
-          data: { status: 'recycling', currentLeaseId: null },
+          data: { currentLeaseId: null, ...(path && path.length ? { status: 'recycling' } : {}) },
         });
       }
       await tx.refund.create({
         data: {
           orderId: o.id,
-          reason,
-          amountCents: o.paidCents ?? o.totalCents,
-          calcDetail: { note: '首版手动登记' },
-          status: 'refunded',
+          reason: input.reason,
+          amountCents: input.amountCents,
+          calcDetail: preview,
+          status: done ? 'refunded' : 'refunding',
+          xianyuRefundNo: input.xianyuRefundNo,
           operatorId: admin.id,
         },
       });
-      await tx.order.update({ where: { id: o.id }, data: { status: 'refunded' } });
+      return leases.length;
     });
     await this.audit.log(
       admin.id,
       'order.refund',
       `order:${no}`,
-      { reason, endedLeases: leases.length },
+      {
+        reason: input.reason,
+        amountCents: input.amountCents,
+        suggestedCents: preview.suggestedCents,
+        xianyuRefundNo: input.xianyuRefundNo ?? null,
+        endedLeases: ended,
+      },
       ip,
     );
     return this.detail(no);
+  }
+
+  async completeRefund(admin: AdminUser, id: string, xianyuRefundNo: string, ip?: string) {
+    const rf = await this.prisma.refund.findUnique({ where: { id }, include: { order: true } });
+    if (!rf) throw new NotFoundException('退款单不存在');
+    if (rf.status !== 'refunding') throw new ConflictException('该退款单已完成');
+    assertOrderTransition(rf.order.status, 'refunded');
+    await this.prisma.$transaction(async (tx) => {
+      const r = await tx.refund.updateMany({
+        where: { id, status: 'refunding' },
+        data: { status: 'refunded', xianyuRefundNo },
+      });
+      if (r.count !== 1) throw new ConflictException('该退款单已完成');
+      await tx.order.update({ where: { id: rf.orderId }, data: { status: 'refunded' } });
+    });
+    await this.audit.log(
+      admin.id,
+      'refund.complete',
+      `order:${rf.order.no}`,
+      { refundId: id, xianyuRefundNo, amountCents: rf.amountCents },
+      ip,
+    );
+    return { id, status: 'refunded' as const };
+  }
+
+  async listRefunds(status?: 'refunding' | 'refunded') {
+    const rows = await this.prisma.refund.findMany({
+      where: status ? { status } : {},
+      include: { order: { select: { no: true, user: { select: { email: true } } } } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      orderNo: r.order.no,
+      userEmail: r.order.user.email,
+      amountCents: r.amountCents,
+      reason: r.reason,
+      status: r.status,
+      xianyuRefundNo: r.xianyuRefundNo,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  /**
+   * 开通超期补偿：开通时间晚于开通截止时，每超 1 天把所有租约延长 1 天。每个订单只能补偿一次。
+   */
+  async compensate(admin: AdminUser, no: string, ip?: string) {
+    const o = await this.load(no);
+    if (o.status !== 'active' || !o.deadlineAt)
+      throw new ConflictException('只有已开通的订单可以补偿');
+    const leases = await this.prisma.lease.findMany({
+      where: { orderId: o.id, status: { not: 'ended' } },
+    });
+    if (!leases.length) throw new ConflictException('订单没有进行中的租约');
+    const startAt = leases.reduce((m, l) => (l.startAt < m ? l.startAt : m), leases[0]!.startAt);
+    const days = Math.ceil((startAt.getTime() - o.deadlineAt.getTime()) / DAY_MS);
+    if (days <= 0) throw new BadRequestException('该订单没有超过开通时限，无需补偿');
+    await this.prisma.$transaction(async (tx) => {
+      const g = await tx.reminderLog.createMany({
+        data: [{ key: `compensate:${o.id}` }],
+        skipDuplicates: true,
+      });
+      if (g.count !== 1) throw new ConflictException('该订单已补偿过');
+      for (const l of leases) {
+        await tx.lease.update({
+          where: { id: l.id },
+          data: {
+            endAt: new Date(l.endAt.getTime() + days * DAY_MS),
+            graceEndAt: new Date(l.graceEndAt.getTime() + days * DAY_MS),
+          },
+        });
+      }
+    });
+    await this.audit.log(admin.id, 'order.compensate', `order:${no}`, { days }, ip);
+    await this.notify.notify(
+      o.userId,
+      'compensated',
+      `订单 ${no} 已补偿 ${days} 天`,
+      `因订单开通超过承诺时限，我们已为你的设备补偿 ${days} 天租期。`,
+    );
+    return { days };
   }
 }

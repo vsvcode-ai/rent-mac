@@ -8,6 +8,7 @@ import {
   UseGuards,
   HttpCode,
   Patch,
+  Put,
 } from '@nestjs/common';
 import type { AdminUser, User } from '@prisma/client';
 import type { Request } from 'express';
@@ -18,6 +19,14 @@ import { AuthGuard, CurrentUser } from '../auth/auth.guard.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { LeasesService } from './leases.service.js';
 
+const credentialSchema = z
+  .object({
+    uuDeviceCode: z.string().trim().min(1).optional(),
+    uuPassword: z.string().min(1).optional(),
+    macUsername: z.string().trim().min(1).optional(),
+    macPassword: z.string().min(1).optional(),
+  })
+  .refine((v) => Object.values(v).some(Boolean), { message: '至少修改一项' });
 const endAtSchema = z.object({
   endAt: z.coerce.date(),
   reason: z.string().trim().min(2, '请填写原因').max(200),
@@ -50,6 +59,19 @@ export class LeasesController {
   @Roles('ops')
   adminCredential(@CurrentAdmin() a: AdminUser, @Param('id') id: string, @Req() req: Request) {
     return this.svc.credentialForAdmin(a.id, id, req.ip, req.headers['user-agent']);
+  }
+
+  @Put('admin/leases/:id/credential')
+  @HttpCode(204)
+  @UseGuards(AdminGuard)
+  @Roles('ops')
+  updateCredential(
+    @CurrentAdmin() a: AdminUser,
+    @Param('id') id: string,
+    @Body(new ZodPipe(credentialSchema)) b: z.infer<typeof credentialSchema>,
+    @Req() req: Request,
+  ) {
+    return this.svc.updateCredential(a.id, id, b, req.ip);
   }
 
   @Patch('admin/leases/:id/end-at')

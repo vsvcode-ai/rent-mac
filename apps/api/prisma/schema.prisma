@@ -149,6 +149,8 @@ model Device {
   note            String?
   currentLeaseId  String?      @unique
   lastHeartbeatAt DateTime?
+  /// 心跳令牌的 SHA-256；明文只在生成时返回一次
+  heartbeatTokenHash String? @unique
   createdAt       DateTime     @default(now())
   leases          Lease[]
 
@@ -167,6 +169,8 @@ model Lease {
   endAt      DateTime
   graceEndAt DateTime
   status     LeaseStatus    @default(active)
+  /// 租约结束（回收 / 退款）的时间
+  endedAt    DateTime?
   createdAt  DateTime       @default(now())
   credential Credential?
   renewals   LeaseRenewal[]
@@ -258,9 +262,15 @@ model TicketNote {
   id        String   @id @default(cuid())
   ticketId  String
   ticket    Ticket   @relation(fields: [ticketId], references: [id])
-  adminId   String
+  adminId   String?
+  /// 用户自己的追加留言
+  fromUser  Boolean  @default(false)
+  /// 内部备注，用户不可见
+  internal  Boolean  @default(false)
   content   String
   createdAt DateTime @default(now())
+
+  @@index([ticketId])
 }
 
 /// 通知渠道：邮件 + 站内信（Telegram 本期不做）
@@ -352,4 +362,22 @@ model AdminSession {
   createdAt DateTime @default(now())
 
   @@index([adminId])
+}
+
+/// 提醒发送记录。key 唯一，保证每个节点只发一次（含租约到期时间，续费后重新计）
+model ReminderLog {
+  key       String   @id
+  createdAt DateTime @default(now())
+}
+
+model Consult {
+  id        String   @id @default(cuid())
+  contact   String
+  quantity  Int?
+  message   String
+  status    String   @default("new") // new | following | done
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
 }

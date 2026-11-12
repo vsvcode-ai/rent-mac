@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ORDER_STATUSES } from '@nyd/shared';
 import type { AdminUser } from '@prisma/client';
 import type { Request } from 'express';
@@ -24,6 +34,17 @@ const verifySchema = z.object({
   confirmedQuantity: z.literal(true, { errorMap: () => ({ message: '请确认已核对数量' }) }),
 });
 const reasonSchema = z.object({ reason: z.string().trim().min(2, '请填写原因').max(200) });
+const previewQuery = z.object({
+  unfixable: z.enum(['0', '1']).default('0'),
+  aup: z.enum(['0', '1']).default('0'),
+});
+const refundSchema = z.object({
+  reason: z.string().trim().min(2, '请填写原因').max(200),
+  amountCents: z.number().int().min(0),
+  xianyuRefundNo: z.string().trim().min(1).max(64).optional(),
+});
+const completeRefundSchema = z.object({ xianyuRefundNo: z.string().trim().min(1).max(64) });
+const refundListQuery = z.object({ status: z.enum(['refunding', 'refunded']).optional() });
 const activateSchema = z.object({
   devices: z
     .array(
@@ -101,14 +122,47 @@ export class AdminOrdersController {
     return this.svc.activate(a, no, b.devices, req.ip);
   }
 
+  @Get('orders/:no/refund-preview')
+  @Roles('admin')
+  refundPreview(
+    @Param('no') no: string,
+    @Query(new ZodPipe(previewQuery)) q: z.infer<typeof previewQuery>,
+  ) {
+    return this.svc.refundPreview(no, { unfixable: q.unfixable === '1', aup: q.aup === '1' });
+  }
+
   @Post('orders/:no/refund')
   @Roles('admin')
   refund(
     @CurrentAdmin() a: AdminUser,
     @Param('no') no: string,
-    @Body(new ZodPipe(reasonSchema)) b: { reason: string },
+    @Body(new ZodPipe(refundSchema)) b: z.infer<typeof refundSchema>,
     @Req() req: Request,
   ) {
-    return this.svc.refund(a, no, b.reason, req.ip);
+    return this.svc.refund(a, no, b, req.ip);
+  }
+
+  @Post('refunds/:id/complete')
+  @HttpCode(200)
+  @Roles('admin')
+  completeRefund(
+    @CurrentAdmin() a: AdminUser,
+    @Param('id') id: string,
+    @Body(new ZodPipe(completeRefundSchema)) b: { xianyuRefundNo: string },
+    @Req() req: Request,
+  ) {
+    return this.svc.completeRefund(a, id, b.xianyuRefundNo, req.ip);
+  }
+
+  @Get('refunds')
+  @Roles('admin')
+  refunds(@Query(new ZodPipe(refundListQuery)) q: z.infer<typeof refundListQuery>) {
+    return this.svc.listRefunds(q.status);
+  }
+
+  @Post('orders/:no/compensate')
+  @Roles('ops')
+  compensate(@CurrentAdmin() a: AdminUser, @Param('no') no: string, @Req() req: Request) {
+    return this.svc.compensate(a, no, req.ip);
   }
 }

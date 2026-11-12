@@ -70,3 +70,59 @@ export async function loginAdmin(ctx: TestCtx, role: AdminRole = 'admin') {
     recoveryCodes: en.body.recoveryCodes as string[],
   };
 }
+
+let xseq = 0;
+export const xyNo = () => `${Date.now()}${String(++xseq).padStart(3, '0')}`;
+export const DAY = 86_400_000;
+
+/** 一步完成：下单 → 提交闲鱼单号 → 客服确认收款 → 运维开通。返回订单、租约、设备和两个后台 agent。 */
+export async function provision(
+  ctx: TestCtx,
+  user: Awaited<ReturnType<typeof registerUser>>,
+  term = 'm1',
+  quantity = 1,
+) {
+  const support = await loginAdmin(ctx, 'support');
+  const ops = await loginAdmin(ctx, 'ops');
+  const o = await user.agent
+    .post('/api/orders')
+    .send({ term, quantity, contactWechat: 'wx', agreedTerms: true })
+    .expect(201);
+  await user.agent
+    .post(`/api/orders/${o.body.no}/xianyu`)
+    .send({ xianyuOrderNo: xyNo(), xianyuBuyerNick: 'n' })
+    .expect(200);
+  await support.agent
+    .post(`/api/admin/orders/${o.body.no}/verify`)
+    .send({ paidCents: o.body.totalCents, confirmedAmount: true, confirmedQuantity: true })
+    .expect(201);
+  const devices = await ctx.prisma.device.findMany({
+    where: { status: 'idle' },
+    take: quantity,
+    orderBy: { code: 'asc' },
+  });
+  await ops.agent
+    .post(`/api/admin/orders/${o.body.no}/activate`)
+    .send({
+      devices: devices.map((d, i) => ({
+        deviceId: d.id,
+        uuDeviceCode: `10000${i}`,
+        uuPassword: `uu-${i}`,
+        macUsername: 'nydesk',
+        macPassword: `mac-${i}`,
+      })),
+    })
+    .expect(201);
+  const leases = await ctx.prisma.lease.findMany({
+    where: { order: { no: o.body.no } },
+    orderBy: { createdAt: 'asc' },
+  });
+  return {
+    no: o.body.no as string,
+    totalCents: o.body.totalCents as number,
+    leases,
+    devices,
+    support,
+    ops,
+  };
+}

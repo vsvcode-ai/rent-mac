@@ -13,7 +13,8 @@ export const createOrderSchema = z
     contactTelegram: z.string().trim().max(64).optional(),
     agreedTerms: z.literal(true, { errorMap: () => ({ message: '请先同意相关条款' }) }),
   })
-  .refine((v) => v.contactWechat || v.contactTelegram, {
+  // 续费单联系方式可不填（缺省用账户资料）
+  .refine((v) => v.kind === 'renew' || v.contactWechat || v.contactTelegram, {
     message: '微信和 Telegram 至少填写一个',
     path: ['contactWechat'],
   })

@@ -5,6 +5,10 @@ import { OrdersModule } from './orders/orders.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { DevicesModule } from './devices/devices.module.js';
 import { SettingsModule } from './settings/settings.module.js';
+import { ConsultModule } from './consult/consult.module.js';
+import { LifecycleModule } from './lifecycle/lifecycle.module.js';
+import { MeModule } from './me/me.module.js';
+import { TicketsModule } from './tickets/tickets.module.js';
 import { LeasesModule } from './leases/leases.module.js';
 import { NotifyModule } from './notify/notify.module.js';
 import { PlansModule } from './plans/plans.module.js';
@@ -20,6 +24,10 @@ import { PlansModule } from './plans/plans.module.js';
     LeasesModule,
     DevicesModule,
     SettingsModule,
+    LifecycleModule,
+    MeModule,
+    TicketsModule,
+    ConsultModule,
   ],
 })
 export class AppModule {}

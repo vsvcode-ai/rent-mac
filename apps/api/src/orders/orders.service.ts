@@ -18,10 +18,12 @@ import { SettingsService } from '../settings/settings.service.js';
 import { Clock } from '../common/clock.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
-export function orderView(o: Order, plan?: Plan | null) {
+export function orderView(o: Order, plan?: Plan | null, deviceCode?: string | null) {
   return {
     no: o.no,
     kind: o.kind,
+    renewLeaseId: o.renewLeaseId,
+    deviceCode: deviceCode ?? null,
     term: o.term,
     months: o.months,
     quantity: o.quantity,
@@ -61,8 +63,37 @@ export class OrdersService {
     return formatOrderNo(now, c.seq);
   }
 
+  /** 续费单对应的设备编号 */
+  private async deviceCodes(orders: Order[]) {
+    const ids = orders.map((o) => o.renewLeaseId).filter((x): x is string => !!x);
+    if (!ids.length) return new Map<string, string>();
+    const leases = await this.prisma.lease.findMany({
+      where: { id: { in: ids } },
+      include: { device: { select: { code: true } } },
+    });
+    return new Map(leases.map((l) => [l.id, l.device.code]));
+  }
+
   async create(userId: string, input: CreateOrderInput) {
-    if (input.kind === 'renew') throw new BadRequestException('续费功能暂未开放');
+    const renew = input.kind === 'renew';
+    let lease: { id: string; device: { code: string } } | null = null;
+    if (renew) {
+      // 只能续自己的、未结束的租约；一台一续
+      lease = await this.prisma.lease.findFirst({
+        where: { id: input.renewLeaseId, userId, status: { in: ['active', 'expiring', 'grace'] } },
+        include: { device: { select: { code: true } } },
+      });
+      if (!lease) throw new NotFoundException('设备不存在或已结束，无法续费');
+      // 同一台机器已有进行中的续费单：不重复创建，避免客服重复收款
+      const dup = await this.prisma.order.findFirst({
+        where: {
+          kind: 'renew',
+          renewLeaseId: lease.id,
+          status: { in: ['pending', 'verifying', 'failed'] },
+        },
+      });
+      if (dup) throw new ConflictException(`该设备已有未完成的续费订单 ${dup.no}，请先处理`);
+    }
     const plan = await this.prisma.plan.findUnique({ where: { term: input.term } });
     if (!plan) throw new BadRequestException('套餐不存在');
     const base = await this.prisma.plan.findUnique({ where: { term: 'm1' } });
@@ -73,31 +104,34 @@ export class OrdersService {
       monthlyCents: p!.monthlyCents,
       dedicatedSupport: p!.dedicatedSupport,
     }));
-    const price = calcPrice(input.term, input.quantity, defs);
+    const quantity = renew ? 1 : input.quantity;
+    const price = calcPrice(input.term, quantity, defs);
     const now = this.clock.now();
+    const profile = renew ? await this.prisma.user.findUnique({ where: { id: userId } }) : null;
     const o = await this.prisma.order.create({
       data: {
         no: await this.nextOrderNo(now),
         userId,
-        kind: 'new',
+        kind: renew ? 'renew' : 'new',
+        renewLeaseId: lease?.id,
         term: plan.term,
         months: plan.months,
-        quantity: input.quantity,
+        quantity,
         unitCents: plan.monthlyCents,
         totalCents: price.totalCents,
         priceSnapshot: {
           ...price,
           plan: { term: plan.term, monthlyCents: plan.monthlyCents },
         } as unknown as Prisma.InputJsonValue,
-        contactWechat: input.contactWechat || null,
-        contactTelegram: input.contactTelegram || null,
+        contactWechat: input.contactWechat || profile?.wechat || null,
+        contactTelegram: input.contactTelegram || profile?.telegram || null,
         status: 'pending',
         expiresAt: new Date(
           now.getTime() + (await this.settings.number('order.pendingExpireHours')) * HOUR_MS,
         ),
       },
     });
-    return orderView(o, plan);
+    return orderView(o, plan, lease?.device.code);
   }
 
   private async own(userId: string, no: string) {
@@ -108,7 +142,12 @@ export class OrdersService {
 
   async get(userId: string, no: string) {
     const o = await this.own(userId, no);
-    return orderView(o, await this.prisma.plan.findUnique({ where: { term: o.term } }));
+    const codes = await this.deviceCodes([o]);
+    return orderView(
+      o,
+      await this.prisma.plan.findUnique({ where: { term: o.term } }),
+      o.renewLeaseId ? codes.get(o.renewLeaseId) : null,
+    );
   }
 
   async list(userId: string) {
@@ -116,7 +155,8 @@ export class OrdersService {
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
-    return rows.map((o) => orderView(o));
+    const codes = await this.deviceCodes(rows);
+    return rows.map((o) => orderView(o, null, o.renewLeaseId ? codes.get(o.renewLeaseId) : null));
   }
 
   async submitXianyu(userId: string, no: string, input: SubmitXianyuInput) {

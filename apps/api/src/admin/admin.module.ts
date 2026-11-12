@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CryptoService } from '../crypto/crypto.service.js';
+import { AdminOpsController } from './admin-ops.controller.js';
+import { AdminOpsService } from './admin-ops.service.js';
 import { AdminAuthController } from './admin-auth.controller.js';
 import { AdminAuthService } from './admin-auth.service.js';
 import { PlansModule } from '../plans/plans.module.js';
@@ -11,8 +13,15 @@ import { AuditService } from './audit.service.js';
 
 @Module({
   imports: [PlansModule],
-  controllers: [AdminAuthController, AdminOrdersController, AuditController],
-  providers: [AdminAuthService, AdminOrdersService, AdminGuard, AuditService, CryptoService],
+  controllers: [AdminAuthController, AdminOrdersController, AuditController, AdminOpsController],
+  providers: [
+    AdminAuthService,
+    AdminOrdersService,
+    AdminOpsService,
+    AdminGuard,
+    AuditService,
+    CryptoService,
+  ],
   exports: [AdminGuard, AuditService, CryptoService],
 })
 export class AdminModule {}

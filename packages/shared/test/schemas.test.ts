@@ -32,6 +32,13 @@ describe('createOrderSchema', () => {
     ).toBe(true);
   });
 });
+describe('续费单联系方式', () => {
+  it('续费单可以不填联系方式', () => {
+    expect(
+      createOrderSchema.safeParse({ ...base, kind: 'renew', renewLeaseId: 'l1' }).success,
+    ).toBe(true);
+  });
+});
 describe('submitXianyuSchema', () => {
   it('闲鱼单号 10 位以上数字', () => {
     expect(

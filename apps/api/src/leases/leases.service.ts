@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DAY_MS, GRACE_DAYS } from '@nyd/shared';
 import { AuditService } from '../admin/audit.service.js';
 import { Clock } from '../common/clock.js';
+import { NotifyService } from '../notify/notify.service.js';
 import { CryptoService } from '../crypto/crypto.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -12,6 +13,7 @@ export class LeasesService {
     private clock: Clock,
     private crypto: CryptoService,
     private audit: AuditService,
+    private notify: NotifyService,
   ) {}
 
   async mine(userId: string) {
@@ -31,6 +33,8 @@ export class LeasesService {
       endAt: l.endAt,
       graceEndAt: l.graceEndAt,
       status: l.status,
+      // 未结束的租约都可以续费（宽限期内也可以）
+      canRenew: l.status === 'active' || l.status === 'expiring' || l.status === 'grace',
       daysLeft: Math.ceil((l.endAt.getTime() - now) / DAY_MS),
     }));
   }
@@ -78,6 +82,44 @@ export class LeasesService {
       ip,
     );
     return { id: u.id, endAt: u.endAt, graceEndAt: u.graceEndAt };
+  }
+
+  /** 运维直接修改连接信息（重置密码类工单）。旧密码立即作废，用户收到站内通知。 */
+  async updateCredential(
+    adminId: string,
+    leaseId: string,
+    b: { uuDeviceCode?: string; uuPassword?: string; macUsername?: string; macPassword?: string },
+    ip?: string,
+  ) {
+    const l = await this.prisma.lease.findUnique({
+      where: { id: leaseId },
+      include: { credential: true, device: true },
+    });
+    if (!l?.credential || l.status === 'ended') throw new NotFoundException('租约不存在或已结束');
+    await this.prisma.credential.update({
+      where: { leaseId },
+      data: {
+        ...(b.uuDeviceCode ? { uuDeviceCode: b.uuDeviceCode } : {}),
+        ...(b.macUsername ? { macUsername: b.macUsername } : {}),
+        ...(b.uuPassword ? { uuPasswordEnc: this.crypto.encrypt(b.uuPassword) } : {}),
+        ...(b.macPassword ? { macPasswordEnc: this.crypto.encrypt(b.macPassword) } : {}),
+      },
+    });
+    // 审计里只记改了哪些字段，不记内容
+    await this.audit.log(
+      adminId,
+      'credential.update',
+      `lease:${leaseId}`,
+      { fields: Object.keys(b) },
+      ip,
+    );
+    await this.notify.notify(
+      l.userId,
+      'credential_updated',
+      `设备 ${l.device.code} 的连接信息已更新`,
+      `客服已更新设备 ${l.device.code} 的连接信息，请登录后在「我的设备」查看最新密码。`,
+      { leaseId },
+    );
   }
 
   private decrypt(c: {

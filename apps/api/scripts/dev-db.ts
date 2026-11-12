@@ -9,7 +9,7 @@ const pg = new EmbeddedPostgres({
   databaseDir: dir,
   user: 'nyd',
   password: 'nyd',
-  port: 5432,
+  port: Number(process.env.PG_PORT ?? 5432),
   persistent: true,
 });
 async function main() {
@@ -20,7 +20,7 @@ async function main() {
   } catch {
     /* 已存在 */
   }
-  console.log('Postgres ready: postgresql://nyd:nyd@localhost:5432/nyd');
+  console.log('Postgres ready on port', process.env.PG_PORT ?? 5432);
 }
 
 const stop = async () => {

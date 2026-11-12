@@ -3,10 +3,14 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { DEVICE_STATUSES, assertDeviceTransition, type DeviceStatus } from '@nyd/shared';
 import type { AdminUser, Prisma } from '@prisma/client';
+import { createHash, randomBytes } from 'node:crypto';
+import { OFFLINE_AFTER_MS } from '../admin/admin-ops.service.js';
 import { AuditService } from '../admin/audit.service.js';
+import { Clock } from '../common/clock.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 export interface ImportRow {
@@ -23,6 +27,7 @@ export class DevicesService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
+    private clock: Clock,
   ) {}
 
   async list(q: { status?: DeviceStatus; keyword?: string; page: number; pageSize: number }) {
@@ -34,7 +39,8 @@ export class DevicesService {
         { serial: { contains: q.keyword, mode: 'insensitive' } },
         { publicIp: { contains: q.keyword } },
       ];
-    const [total, rows, groups] = await Promise.all([
+    const cutoff = new Date(this.clock.now().getTime() - OFFLINE_AFTER_MS);
+    const [total, rows, groups, offline] = await Promise.all([
       this.prisma.device.count({ where }),
       this.prisma.device.findMany({
         where,
@@ -43,6 +49,12 @@ export class DevicesService {
         take: q.pageSize,
       }),
       this.prisma.device.groupBy({ by: ['status'], _count: true }),
+      this.prisma.device.count({
+        where: {
+          heartbeatTokenHash: { not: null },
+          OR: [{ lastHeartbeatAt: null }, { lastHeartbeatAt: { lt: cutoff } }],
+        },
+      }),
     ]);
     const leaseIds = rows.map((r) => r.currentLeaseId).filter((x): x is string => !!x);
     const leases = await this.prisma.lease.findMany({
@@ -52,9 +64,12 @@ export class DevicesService {
     const byId = new Map(leases.map((l) => [l.id, l]));
     return {
       total,
-      summary: Object.fromEntries(
-        DEVICE_STATUSES.map((s) => [s, groups.find((g) => g.status === s)?._count ?? 0]),
-      ),
+      summary: {
+        ...Object.fromEntries(
+          DEVICE_STATUSES.map((s) => [s, groups.find((g) => g.status === s)?._count ?? 0]),
+        ),
+        offline,
+      },
       items: rows.map((d) => {
         const l = d.currentLeaseId ? byId.get(d.currentLeaseId) : undefined;
         return {
@@ -65,6 +80,9 @@ export class DevicesService {
           publicIp: d.publicIp,
           status: d.status,
           note: d.note,
+          // null = 未装心跳 agent；true / false = 5 分钟内是否有心跳
+          online: !d.heartbeatTokenHash ? null : !!d.lastHeartbeatAt && d.lastHeartbeatAt >= cutoff,
+          lastHeartbeatAt: d.lastHeartbeatAt,
           lessee: l?.user.email ?? null,
           leaseId: l?.id ?? null,
           endAt: l?.endAt ?? null,
@@ -97,6 +115,8 @@ export class DevicesService {
       throw new BadRequestException('不能手动设置为该状态');
     if (d.currentLeaseId && to !== 'fault' && to !== 'maintenance')
       throw new ConflictException('机器正在租用中，不能直接改为该状态');
+    if (d.status === 'recycling' && to === 'idle')
+      throw new ConflictException('回收中的机器请在回收队列里完成检查清单');
     assertDeviceTransition(d.status, to);
     const u = await this.prisma.device.update({
       where: { id },
@@ -159,5 +179,31 @@ export class DevicesService {
     await this.prisma.device.createMany({ data: clean as never });
     await this.audit.log(admin.id, 'device.import', 'devices', { count: clean.length }, ip);
     return { imported: clean.length, valid: clean.length, errors };
+  }
+
+  /** 重新生成心跳令牌：库里只存 SHA-256，明文只在这次返回 */
+  async issueToken(admin: AdminUser, id: string, ip?: string) {
+    const d = await this.prisma.device.findUnique({ where: { id } });
+    if (!d) throw new NotFoundException('机器不存在');
+    const token = randomBytes(32).toString('base64url');
+    await this.prisma.device.update({
+      where: { id },
+      data: {
+        heartbeatTokenHash: createHash('sha256').update(token).digest('hex'),
+        lastHeartbeatAt: null,
+      },
+    });
+    await this.audit.log(admin.id, 'device.token', `device:${d.code}`, undefined, ip);
+    return { token };
+  }
+
+  async heartbeat(token: string | undefined) {
+    if (!token) throw new UnauthorizedException('缺少设备令牌');
+    const hash = createHash('sha256').update(token).digest('hex');
+    const r = await this.prisma.device.updateMany({
+      where: { heartbeatTokenHash: hash },
+      data: { lastHeartbeatAt: this.clock.now() },
+    });
+    if (r.count !== 1) throw new UnauthorizedException('设备令牌无效');
   }
 }

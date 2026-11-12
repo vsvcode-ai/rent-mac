@@ -299,7 +299,7 @@ describe('退款登记', () => {
       .expect(201);
     await boss.agent
       .post(`/api/admin/orders/${o.no}/refund`)
-      .send({ reason: '用户申请退款' })
+      .send({ reason: '用户申请退款', amountCents: 0, xianyuRefundNo: '7000000000001' })
       .expect(201);
     expect((await ctx.prisma.device.findUniqueOrThrow({ where: { id: d!.id } })).status).toBe(
       'recycling',
